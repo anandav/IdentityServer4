@@ -1,10 +1,11 @@
 ﻿// Copyright (c) Brock Allen & Dominick Baier. All rights reserved.
 // Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
 
+
 using FluentAssertions;
+using IdentityServer4.IntegrationTests.Common;
 using IdentityServer4.Models;
-using IdentityServer4.Services.InMemory;
-using IdentityServer4.Tests.Common;
+using IdentityServer4.Test;
 using System;
 using System.Collections.Generic;
 using System.Net;
@@ -12,7 +13,7 @@ using System.Security.Claims;
 using System.Threading.Tasks;
 using Xunit;
 
-namespace IdentityServer4.Tests.Conformance.Basic
+namespace IdentityServer4.IntegrationTests.Conformance.Basic
 {
     public class ResponseTypeResponseModeTests
     {
@@ -34,7 +35,7 @@ namespace IdentityServer4.Tests.Conformance.Basic
                 },
 
                 AllowedGrantTypes = GrantTypes.Code,
-                AllowAccessToAllScopes = true,
+                AllowedScopes = { "openid" },
 
                 RequireConsent = false,
                 RedirectUris = new List<string>
@@ -43,17 +44,17 @@ namespace IdentityServer4.Tests.Conformance.Basic
                 }
             });
 
-            _mockPipeline.Scopes.Add(StandardScopes.OpenId);
+            _mockPipeline.IdentityScopes.Add(new IdentityResources.OpenId());
 
-            _mockPipeline.Users.Add(new InMemoryUser
+            _mockPipeline.Users.Add(new TestUser
             {
-                Subject = "bob",
+                SubjectId = "bob",
                 Username = "bob",
                 Claims = new Claim[]
                     {
                         new Claim("name", "Bob Loblaw"),
                         new Claim("email", "bob@loblaw.com"),
-                        new Claim("role", "Attorney"),
+                        new Claim("role", "Attorney")
                     }
             });
         }
@@ -86,27 +87,30 @@ namespace IdentityServer4.Tests.Conformance.Basic
             authorization.State.Should().Be(state);
         }
 
-        // todo brock: update to new behavior
-        //[Fact]
-        //[Trait("Category", Category)]
-        //public void Request_missing_response_type_rejected()
-        //{
-        //    host.Login();
+        // this might not be in sync with the actual conformance tests
+        // since we dead-end on the error page due to changes 
+        // to follow the RFC to address open redirect in original OAuth RFC
+        [Fact]
+        [Trait("Category", Category)]
+        public async Task Request_missing_response_type_rejected()
+        {
+            await _mockPipeline.LoginAsync("bob");
 
-        //    var state = Guid.NewGuid().ToString();
-        //    var nonce = Guid.NewGuid().ToString();
+            var state = Guid.NewGuid().ToString();
+            var nonce = Guid.NewGuid().ToString();
 
-        //    var url = host.GetAuthorizeUrl(client_id, redirect_uri, "openid", /*response_type*/ null, state, nonce);
+            var url = _mockPipeline.CreateAuthorizeUrl(
+                clientId: "code_client",
+                responseType: null, // missing
+                scope: "openid",
+                redirectUri: "https://code_client/callback",
+                state: state,
+                nonce: nonce);
 
-        //    var result = host.Client.GetAsync(url).Result;
-        //    result.StatusCode.Should().Be(HttpStatusCode.Found);
-        //    result.Headers.Location.AbsoluteUri.Should().Contain("#");
+            _mockPipeline.BrowserClient.AllowAutoRedirect = true;
+            var response = await _mockPipeline.BrowserClient.GetAsync(url);
 
-        //    var query = result.Headers.Location.ParseHashFragment();
-        //    query.AllKeys.Should().Contain("state");
-        //    query["state"].Should().Be(state);
-        //    query.AllKeys.Should().Contain("error");
-        //    query["error"].Should().Be("unsupported_response_type");
-        //}
+            _mockPipeline.ErrorMessage.Error.Should().Be("unsupported_response_type");
+        }
     }
 }

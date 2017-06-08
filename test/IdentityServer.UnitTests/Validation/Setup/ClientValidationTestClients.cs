@@ -1,11 +1,14 @@
 ﻿// Copyright (c) Brock Allen & Dominick Baier. All rights reserved.
 // Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
 
+
 using IdentityServer4.Models;
+using IdentityServer4.UnitTests.Common;
 using System;
 using System.Collections.Generic;
+using System.Security.Cryptography.X509Certificates;
 
-namespace IdentityServer4.Tests.Validation
+namespace IdentityServer4.UnitTests.Validation
 {
     static class ClientValidationTestClients
     {
@@ -54,7 +57,7 @@ namespace IdentityServer4.Tests.Validation
                     {
                         new Secret
                         {
-                            Type = Constants.SecretTypes.X509CertificateThumbprint,
+                            Type = IdentityServerConstants.SecretTypes.X509CertificateThumbprint,
                             Value = TestCert.Load().Thumbprint
                         }
                     }
@@ -70,7 +73,39 @@ namespace IdentityServer4.Tests.Validation
                     {
                         new Secret
                         {
-                            Type = Constants.SecretTypes.X509CertificateThumbprint,
+                            Type = IdentityServerConstants.SecretTypes.X509CertificateThumbprint,
+                            Value = "invalid"
+                        }
+                    }
+                },
+
+                new Client
+                {
+                    ClientName = "Client with Base64 encoded X509 Certificate",
+                    ClientId = "certificate_base64_valid",
+                    Enabled = true,
+
+                    ClientSecrets = new List<Secret>
+                    {
+                        new Secret
+                        {
+                            Type = IdentityServerConstants.SecretTypes.X509CertificateBase64,
+                            Value = Convert.ToBase64String(TestCert.Load().Export(X509ContentType.Cert))
+                        }
+                    }
+                },
+
+                new Client
+                {
+                    ClientName = "Client with Base64 encoded X509 Certificate",
+                    ClientId = "certificate_base64_invalid",
+                    Enabled = true,
+
+                    ClientSecrets = new List<Secret>
+                    {
+                        new Secret
+                        {
+                            Type = IdentityServerConstants.SecretTypes.X509CertificateBase64,
                             Value = "invalid"
                         }
                     }
@@ -100,8 +135,8 @@ namespace IdentityServer4.Tests.Validation
                         new Secret("secret"),
                         new Secret("foobar", "some description"),
                         new Secret("quux"),
-                        new Secret("notexpired", DateTimeOffset.UtcNow.AddDays(1)),
-                        new Secret("expired", DateTimeOffset.UtcNow.AddDays(-1)),
+                        new Secret("notexpired", DateTime.UtcNow.AddDays(1)),
+                        new Secret("expired", DateTime.UtcNow.AddDays(-1))
                     }
                 },
 
@@ -120,11 +155,11 @@ namespace IdentityServer4.Tests.Validation
                         // quux
                         new Secret("quux".Sha512()),
                         // notexpired
-                        new Secret("notexpired".Sha256(), DateTimeOffset.UtcNow.AddDays(1)),
+                        new Secret("notexpired".Sha256(), DateTime.UtcNow.AddDays(1)),
                         // expired
-                        new Secret("expired".Sha512(), DateTimeOffset.UtcNow.AddDays(-1)),
+                        new Secret("expired".Sha512(), DateTime.UtcNow.AddDays(-1))
                     }
-                },
+                }
             };
         }
     }

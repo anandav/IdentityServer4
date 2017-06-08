@@ -1,9 +1,10 @@
 ﻿// Copyright (c) Brock Allen & Dominick Baier. All rights reserved.
 // Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
 
+
 using System.Net.Http;
 
-namespace IdentityServer4.Tests.Common
+namespace IdentityServer4.IntegrationTests.Common
 {
     public class BrowserClient : HttpClient
     {
@@ -34,6 +35,16 @@ namespace IdentityServer4.Tests.Common
         {
             get { return BrowserHandler.StopRedirectingAfter; }
             set { BrowserHandler.StopRedirectingAfter = value; }
+        }
+
+        internal void RemoveCookie(string uri, string name)
+        {
+            BrowserHandler.RemoveCookie(uri, name);
+        }
+
+        internal System.Net.Cookie GetCookie(string uri, string name)
+        {
+            return BrowserHandler.GetCookie(uri, name);
         }
     }
 }

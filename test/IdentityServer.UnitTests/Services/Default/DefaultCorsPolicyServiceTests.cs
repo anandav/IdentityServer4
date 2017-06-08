@@ -1,12 +1,13 @@
 ﻿// Copyright (c) Brock Allen & Dominick Baier. All rights reserved.
 // Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
 
+
 using FluentAssertions;
-using IdentityServer4.Services.Default;
-using UnitTests.Common;
+using IdentityServer4.Services;
+using IdentityServer4.UnitTests.Common;
 using Xunit;
 
-namespace UnitTests.Services.Default
+namespace IdentityServer4.UnitTests.Services.Default
 {
     public class DefaultCorsPolicyServiceTests
     {

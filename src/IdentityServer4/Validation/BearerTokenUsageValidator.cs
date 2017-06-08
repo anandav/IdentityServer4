@@ -1,21 +1,43 @@
 ﻿// Copyright (c) Brock Allen & Dominick Baier. All rights reserved.
 // Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
 
+
 using IdentityModel;
 using IdentityServer4.Extensions;
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Logging;
 using System.Linq;
 using System.Threading.Tasks;
 
 namespace IdentityServer4.Validation
 {
-    public class BearerTokenUsageValidator
+    /// <summary>
+    /// Validates a request that uses a bearer token for authentication
+    /// </summary>
+    internal class BearerTokenUsageValidator
     {
+        private readonly ILogger _logger;
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="BearerTokenUsageValidator"/> class.
+        /// </summary>
+        /// <param name="logger">The logger.</param>
+        public BearerTokenUsageValidator(ILogger<BearerTokenUsageValidator> logger)
+        {
+            _logger = logger;
+        }
+
+        /// <summary>
+        /// Validates the request.
+        /// </summary>
+        /// <param name="context">The context.</param>
+        /// <returns></returns>
         public async Task<BearerTokenUsageValidationResult> ValidateAsync(HttpContext context)
         {
             var result = ValidateAuthorizationHeader(context);
             if (result.TokenFound)
             {
+                _logger.LogDebug("Bearer token found in header");
                 return result;
             }
 
@@ -24,13 +46,20 @@ namespace IdentityServer4.Validation
                 result = await ValidatePostBodyAsync(context);
                 if (result.TokenFound)
                 {
+                    _logger.LogDebug("Bearer token found in body");
                     return result;
                 }
             }
 
+            _logger.LogDebug("Bearer token not found");
             return new BearerTokenUsageValidationResult();
         }
 
+        /// <summary>
+        /// Validates the authorization header.
+        /// </summary>
+        /// <param name="context">The context.</param>
+        /// <returns></returns>
         public BearerTokenUsageValidationResult ValidateAuthorizationHeader(HttpContext context)
         {
             var authorizationHeader = context.Request.Headers["Authorization"].FirstOrDefault();
@@ -40,7 +69,7 @@ namespace IdentityServer4.Validation
                 if (header.StartsWith(OidcConstants.AuthenticationSchemes.AuthorizationHeaderBearer))
                 {
                     var value = header.Substring(OidcConstants.AuthenticationSchemes.AuthorizationHeaderBearer.Length).Trim();
-                    if (value != null && value.Length > 0)
+                    if (value.IsPresent())
                     {
                         return new BearerTokenUsageValidationResult
                         {
@@ -50,25 +79,34 @@ namespace IdentityServer4.Validation
                         };
                     }
                 }
+                else
+                {
+                    _logger.LogTrace("Unexpected header format: {header}", header);
+                }
             }
 
             return new BearerTokenUsageValidationResult();
         }
 
-        public Task<BearerTokenUsageValidationResult> ValidatePostBodyAsync(HttpContext context)
+        /// <summary>
+        /// Validates the post body.
+        /// </summary>
+        /// <param name="context">The context.</param>
+        /// <returns></returns>
+        public async Task<BearerTokenUsageValidationResult> ValidatePostBodyAsync(HttpContext context)
         {
-            var token = context.Request.Form["access_token"].FirstOrDefault();
+            var token = (await context.Request.ReadFormAsync())["access_token"].FirstOrDefault();
             if (token.IsPresent())
             {
-                return Task.FromResult(new BearerTokenUsageValidationResult
+                return new BearerTokenUsageValidationResult
                 {
                     TokenFound = true,
                     Token = token,
                     UsageType = BearerTokenUsageType.PostBody
-                });
+                };
             }
 
-            return Task.FromResult(new BearerTokenUsageValidationResult());
+            return new BearerTokenUsageValidationResult();
         }
     }
 }

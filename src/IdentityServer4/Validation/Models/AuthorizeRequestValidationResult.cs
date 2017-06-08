@@ -1,6 +1,7 @@
 ﻿// Copyright (c) Brock Allen & Dominick Baier. All rights reserved.
 // Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
 
+
 namespace IdentityServer4.Validation
 {
     /// <summary>
@@ -11,18 +12,26 @@ namespace IdentityServer4.Validation
         /// <summary>
         /// Initializes a new instance of the <see cref="AuthorizeRequestValidationResult"/> class.
         /// </summary>
-        public AuthorizeRequestValidationResult()
+        /// <param name="request">The request.</param>
+        public AuthorizeRequestValidationResult(ValidatedAuthorizeRequest request)
         {
-            ErrorType = ErrorTypes.User;
+            ValidatedRequest = request;
+            IsError = false;
         }
 
         /// <summary>
-        /// Gets or sets the type of the error (user vs client).
+        /// Initializes a new instance of the <see cref="AuthorizeRequestValidationResult" /> class.
         /// </summary>
-        /// <value>
-        /// The type of the error.
-        /// </value>
-        public ErrorTypes ErrorType { get; set; }
+        /// <param name="request">The request.</param>
+        /// <param name="error">The error.</param>
+        /// <param name="errorDescription">The error description.</param>
+        public AuthorizeRequestValidationResult(ValidatedAuthorizeRequest request, string error, string errorDescription = null)
+        {
+            ValidatedRequest = request;
+            IsError = true;
+            Error = error;
+            ErrorDescription = errorDescription;
+        }
 
         /// <summary>
         /// Gets or sets the validated request.
@@ -30,6 +39,6 @@ namespace IdentityServer4.Validation
         /// <value>
         /// The validated request.
         /// </value>
-        public ValidatedAuthorizeRequest ValidatedRequest { get; set; }
+        public ValidatedAuthorizeRequest ValidatedRequest { get; }
     }
 }

@@ -1,19 +1,76 @@
 ﻿// Copyright (c) Brock Allen & Dominick Baier. All rights reserved.
 // Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
 
+
+using IdentityServer4.Extensions;
+using System;
 using System.Collections.Generic;
 
 namespace IdentityServer4.Models
 {
     /// <summary>
-    /// Models are resource (either identity resource or web api resource)
+    /// Models access to an API resource
     /// </summary>
     public class Scope
     {
         /// <summary>
-        /// Indicates if scope is enabled and can be requested. Defaults to true.
+        /// Initializes a new instance of the <see cref="Scope"/> class.
         /// </summary>
-        public bool Enabled { get; set; }
+        public Scope()
+        {
+        }
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="Scope"/> class.
+        /// </summary>
+        /// <param name="name">The name.</param>
+        public Scope(string name)
+            : this(name, name, null)
+        {
+        }
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="Scope"/> class.
+        /// </summary>
+        /// <param name="name">The name.</param>
+        /// <param name="displayName">The display name.</param>
+        public Scope(string name, string displayName)
+            : this(name, displayName, null)
+        {
+        }
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="Scope"/> class.
+        /// </summary>
+        /// <param name="name">The name.</param>
+        /// <param name="claimTypes">The user-claim types.</param>
+        public Scope(string name, IEnumerable<string> claimTypes)
+            : this(name, name, claimTypes)
+        {
+        }
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="Scope"/> class.
+        /// </summary>
+        /// <param name="name">The name.</param>
+        /// <param name="displayName">The display name.</param>
+        /// <param name="claimTypes">The user-claim types.</param>
+        /// <exception cref="System.ArgumentNullException">name</exception>
+        public Scope(string name, string displayName, IEnumerable<string> claimTypes)
+        {
+            if (name.IsMissing()) throw new ArgumentNullException(nameof(name));
+
+            Name = name;
+            DisplayName = displayName;
+
+            if (!claimTypes.IsNullOrEmpty())
+            {
+                foreach (var type in claimTypes)
+                {
+                    UserClaims.Add(type);
+                }
+            }
+        }
 
         /// <summary>
         /// Name of the scope. This is the value a client will use to request the scope.
@@ -29,67 +86,25 @@ namespace IdentityServer4.Models
         /// Description. This value will be used e.g. on the consent screen.
         /// </summary>
         public string Description { get; set; }
-        
+
         /// <summary>
         /// Specifies whether the user can de-select the scope on the consent screen. Defaults to false.
         /// </summary>
-        public bool Required { get; set; }
+        public bool Required { get; set; } = false;
 
         /// <summary>
         /// Specifies whether the consent screen will emphasize this scope. Use this setting for sensitive or important scopes. Defaults to false.
         /// </summary>
-        public bool Emphasize { get; set; }
-
-        /// <summary>
-        /// Specifies whether this scope is about identity information from the userinfo endpoint, or a resource (e.g. a Web API). Defaults to Resource.
-        /// </summary>
-        public ScopeType Type { get; set; }
-        
-        /// <summary>
-        /// List of user claims that should be included in the identity (identity scope) or access token (resource scope). 
-        /// </summary>
-        public List<ScopeClaim> Claims { get; set; }
-        
-        /// <summary>
-        /// If enabled, all claims for the user will be included in the token. Defaults to false.
-        /// </summary>
-        public bool IncludeAllClaimsForUser { get; set; }
-        
-        /// <summary>
-        /// Rule for determining which claims should be included in the token (this is implementation specific)
-        /// </summary>
-        public string ClaimsRule { get; set; }
+        public bool Emphasize { get; set; } = false;
 
         /// <summary>
         /// Specifies whether this scope is shown in the discovery document. Defaults to true.
         /// </summary>
-        public bool ShowInDiscoveryDocument { get; set; }
+        public bool ShowInDiscoveryDocument { get; set; } = true;
 
         /// <summary>
-        /// Gets or sets the scope secrets.
+        /// List of user-claim types that should be included in the access token.
         /// </summary>
-        /// <value>
-        /// The scope secrets.
-        /// </value>
-        public List<Secret> ScopeSecrets { get; set; }
-
-        /// <summary>
-        /// Specifies whether this scope is allowed to see other scopes when using the introspection endpoint
-        /// </summary>
-        public bool AllowUnrestrictedIntrospection { get; set; }
-
-        /// <summary>
-        /// Creates a Scope with default values
-        /// </summary>
-        public Scope()
-        {
-            Type = ScopeType.Resource;
-            Claims = new List<ScopeClaim>();
-            ScopeSecrets = new List<Secret>();
-            IncludeAllClaimsForUser = false;
-            Enabled = true;
-            ShowInDiscoveryDocument = true;
-            AllowUnrestrictedIntrospection = false;
-        }
+        public ICollection<string> UserClaims { get; set; } = new HashSet<string>();
     }
 }

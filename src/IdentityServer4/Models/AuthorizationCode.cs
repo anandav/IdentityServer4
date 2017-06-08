@@ -1,10 +1,9 @@
 ﻿// Copyright (c) Brock Allen & Dominick Baier. All rights reserved.
 // Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
 
-using IdentityServer4.Extensions;
+
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Security.Claims;
 
 namespace IdentityServer4.Models
@@ -12,7 +11,7 @@ namespace IdentityServer4.Models
     /// <summary>
     /// Modles an authorization code.
     /// </summary>
-    public class AuthorizationCode : ITokenMetadata
+    public class AuthorizationCode
     {
         /// <summary>
         /// Gets or sets the creation time.
@@ -20,15 +19,23 @@ namespace IdentityServer4.Models
         /// <value>
         /// The creation time.
         /// </value>
-        public DateTimeOffset CreationTime { get; set; } = DateTimeOffsetHelper.UtcNow;
+        public DateTime CreationTime { get; set; } = IdentityServerDateTime.UtcNow;
 
         /// <summary>
-        /// Gets or sets the client.
+        /// Gets or sets the life time in seconds.
         /// </summary>
         /// <value>
-        /// The client.
+        /// The life time.
         /// </value>
-        public Client Client { get; set; }
+        public int Lifetime { get; set; }
+
+        /// <summary>
+        /// Gets or sets the ID of the client.
+        /// </summary>
+        /// <value>
+        /// The ID of the client.
+        /// </value>
+        public string ClientId { get; set; }
 
         /// <summary>
         /// Gets or sets the subject.
@@ -52,7 +59,7 @@ namespace IdentityServer4.Models
         /// <value>
         /// The requested scopes.
         /// </value>
-        public IEnumerable<Scope> RequestedScopes { get; set; }
+        public IEnumerable<string> RequestedScopes { get; set; }
 
         /// <summary>
         /// Gets or sets the redirect URI.
@@ -101,38 +108,5 @@ namespace IdentityServer4.Models
         /// The code challenge method
         /// </value>
         public string CodeChallengeMethod { get; set; }
-
-        /// <summary>
-        /// Gets the subject identifier.
-        /// </summary>
-        /// <value>
-        /// The subject identifier.
-        /// </value>
-        public string SubjectId
-        {
-            get { return Subject.GetSubjectId(); }
-        }
-
-        /// <summary>
-        /// Gets the client identifier.
-        /// </summary>
-        /// <value>
-        /// The client identifier.
-        /// </value>
-        public string ClientId
-        {
-            get { return Client.ClientId; }
-        }
-
-        /// <summary>
-        /// Gets the scopes.
-        /// </summary>
-        /// <value>
-        /// The scopes.
-        /// </value>
-        public IEnumerable<string> Scopes
-        {
-            get { return RequestedScopes.Select(x => x.Name); }
-        }
     }
 }

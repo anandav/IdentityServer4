@@ -1,15 +1,16 @@
 ﻿// Copyright (c) Brock Allen & Dominick Baier. All rights reserved.
 // Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
 
-using Microsoft.AspNet.Http;
+
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.WebUtilities;
 using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.Diagnostics;
-using System.IO;
 using System.Linq;
 using System.Text;
+using System.Text.Encodings.Web;
 
 namespace IdentityServer4.Extensions
 {
@@ -18,6 +19,11 @@ namespace IdentityServer4.Extensions
         [DebuggerStepThrough]
         public static string ToSpaceSeparatedString(this IEnumerable<string> list)
         {
+            if (list == null)
+            {
+                return "";
+            }
+
             var sb = new StringBuilder(100);
 
             foreach (var element in list)
@@ -167,6 +173,12 @@ namespace IdentityServer4.Extensions
         }
 
         [DebuggerStepThrough]
+        public static string AddQueryString(this string url, string name, string value)
+        {
+            return url.AddQueryString(name + "=" + UrlEncoder.Default.Encode(value));
+        }
+
+        [DebuggerStepThrough]
         public static string AddHashFragment(this string url, string query)
         {
             if (!url.Contains("#"))
@@ -214,18 +226,6 @@ namespace IdentityServer4.Extensions
             }
 
             return null;
-        }
-
-        public static Stream ToStream(this string s)
-        {
-            if (s == null) throw new ArgumentNullException("s");
-
-            var ms = new MemoryStream();
-            var sw = new StreamWriter(ms);
-            sw.Write(s);
-            sw.Flush();
-            ms.Seek(0, SeekOrigin.Begin);
-            return ms;
         }
     }
 }

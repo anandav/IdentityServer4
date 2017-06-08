@@ -1,6 +1,7 @@
 ﻿// Copyright (c) Brock Allen & Dominick Baier. All rights reserved.
 // Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
 
+
 using System.Threading.Tasks;
 
 namespace IdentityServer4.Validation
@@ -13,9 +14,11 @@ namespace IdentityServer4.Validation
         /// <summary>
         /// Validates the custom grant request.
         /// </summary>
-        /// <param name="request">The validated token request.</param>
-        /// <returns>A principal</returns>
-        Task<GrantValidationResult> ValidateAsync(ValidatedTokenRequest request);
+        /// <param name="context">The context.</param>
+        /// <returns>
+        /// A principal
+        /// </returns>
+        Task ValidateAsync(ExtensionGrantValidationContext context);
 
         /// <summary>
         /// Returns the grant type this validator can deal with

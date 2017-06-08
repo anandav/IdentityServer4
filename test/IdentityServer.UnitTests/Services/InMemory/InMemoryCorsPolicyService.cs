@@ -1,14 +1,15 @@
 ﻿// Copyright (c) Brock Allen & Dominick Baier. All rights reserved.
 // Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
 
+
 using FluentAssertions;
 using IdentityServer4.Models;
-using IdentityServer4.Services.InMemory;
+using IdentityServer4.Services;
+using IdentityServer4.UnitTests.Common;
 using System.Collections.Generic;
-using UnitTests.Common;
 using Xunit;
 
-namespace UnitTests.Services.InMemory
+namespace IdentityServer4.UnitTests.Services.InMemory
 {
     public class InMemoryCorsPolicyServiceTests
     {
@@ -64,7 +65,7 @@ namespace UnitTests.Services.InMemory
                 {
                     "http://foo",
                     "http://bar",
-                    "http://baz",
+                    "http://baz"
                 }
             });
             _subject.IsOriginAllowedAsync("http://bar").Result.Should().Be(true);
@@ -80,7 +81,7 @@ namespace UnitTests.Services.InMemory
                 {
                     "http://foo",
                     "http://bar",
-                    "http://baz",
+                    "http://baz"
                 }
             });
             _subject.IsOriginAllowedAsync("http://quux").Result.Should().Be(false);
@@ -95,14 +96,14 @@ namespace UnitTests.Services.InMemory
                 {
                     AllowedCorsOrigins = new List<string>
                     {
-                        "http://foo",
+                        "http://foo"
                     }
                 },
                 new Client
                 {
                     AllowedCorsOrigins = new List<string>
                     {
-                        "http://foo",
+                        "http://foo"
                     }
                 }
             });

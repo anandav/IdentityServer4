@@ -1,10 +1,10 @@
 ﻿// Copyright (c) Brock Allen & Dominick Baier. All rights reserved.
 // Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
 
+
 using System.Collections.Generic;
-using System.Linq;
 using System.Security.Claims;
-using IdentityServer4.Extensions;
+using System;
 
 namespace IdentityServer4.Models
 {
@@ -17,9 +17,7 @@ namespace IdentityServer4.Models
         /// Initializes a new instance of the <see cref="ProfileDataRequestContext"/> class.
         /// </summary>
         public ProfileDataRequestContext()
-        {
-            IssuedClaims = Enumerable.Empty<Claim>();
-        }
+        { }
 
         /// <summary>
         /// Initializes a new instance of the <see cref="ProfileDataRequestContext" /> class.
@@ -28,22 +26,17 @@ namespace IdentityServer4.Models
         /// <param name="client">The client.</param>
         /// <param name="caller">The caller.</param>
         /// <param name="requestedClaimTypes">The requested claim types.</param>
-        public ProfileDataRequestContext(ClaimsPrincipal subject, Client client, string caller, IEnumerable<string> requestedClaimTypes = null)
+        public ProfileDataRequestContext(ClaimsPrincipal subject, Client client, string caller, IEnumerable<string> requestedClaimTypes)
         {
+            if (subject == null) throw new ArgumentNullException(nameof(subject));
+            if (client == null) throw new ArgumentNullException(nameof(client));
+            if (caller == null) throw new ArgumentNullException(nameof(caller));
+            if (requestedClaimTypes == null) throw new ArgumentNullException(nameof(requestedClaimTypes));
+
             Subject = subject;
             Client = client;
             Caller = caller;
-
-            if (requestedClaimTypes.IsNullOrEmpty())
-            {
-                AllClaimsRequested = true;
-            }
-            else
-            {
-                RequestedClaimTypes = requestedClaimTypes;
-            }
-
-            IssuedClaims = Enumerable.Empty<Claim>();
+            RequestedClaimTypes = requestedClaimTypes;
         }
 
         /// <summary>
@@ -53,14 +46,6 @@ namespace IdentityServer4.Models
         /// The subject.
         /// </value>
         public ClaimsPrincipal Subject { get; set; }
-
-        /// <summary>
-        /// Gets or sets a value indicating whether all claims are requested.
-        /// </summary>
-        /// <value>
-        ///   <c>true</c> if all claims are requested; otherwise, <c>false</c>.
-        /// </value>
-        public bool AllClaimsRequested { get; set; }
 
         /// <summary>
         /// Gets or sets the requested claim types.
@@ -92,6 +77,6 @@ namespace IdentityServer4.Models
         /// <value>
         /// The issued claims.
         /// </value>
-        public IEnumerable<Claim> IssuedClaims { get; set; }
+        public List<Claim> IssuedClaims { get; set; } = new List<Claim>();
     }
 }

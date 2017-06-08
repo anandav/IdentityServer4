@@ -1,9 +1,12 @@
 ﻿// Copyright (c) Brock Allen & Dominick Baier. All rights reserved.
 // Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
 
+
 using IdentityServer4.Extensions;
 using Microsoft.AspNetCore.Http;
 using System.Threading.Tasks;
+
+#pragma warning disable 1591
 
 namespace IdentityServer4.Hosting
 {
@@ -16,13 +19,13 @@ namespace IdentityServer4.Hosting
             _next = next;
         }
 
-        public async Task Invoke(HttpContext context, IdentityServerContext idsvrContext)
+        public async Task Invoke(HttpContext context)
         {
             var request = context.Request;
 
-            var host = request.Scheme + "://" + request.Host.Value;
-            idsvrContext.SetHost(host);
-            idsvrContext.SetBasePath(request.PathBase.Value.RemoveTrailingSlash());
+            var origin = request.Scheme + "://" + request.Host.Value;
+            context.SetIdentityServerOrigin(origin);
+            context.SetIdentityServerBasePath(request.PathBase.Value.RemoveTrailingSlash());
 
             await _next(context);
         }

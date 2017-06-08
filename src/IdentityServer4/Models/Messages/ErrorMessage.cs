@@ -1,7 +1,6 @@
 ﻿// Copyright (c) Brock Allen & Dominick Baier. All rights reserved.
 // Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
 
-using IdentityModel;
 
 namespace IdentityServer4.Models
 {
@@ -25,20 +24,20 @@ namespace IdentityServer4.Models
         /// The UI locales.
         /// </value>
         public string UiLocales { get; set; }
-        
+
         /// <summary>
         /// Gets or sets the error code.
         /// </summary>
         /// <value>
         /// The error code.
         /// </value>
-        public string ErrorCode { get; set; }
+        public string Error { get; set; }
 
         /// <summary>
-        /// Gets or sets the error message.
+        /// Gets or sets the error description.
         /// </summary>
         /// <value>
-        /// The error message.
+        /// The error description.
         /// </value>
         public string ErrorDescription { get; set; }
 
@@ -49,13 +48,5 @@ namespace IdentityServer4.Models
         /// The request identifier.
         /// </value>
         public string RequestId { get; set; }
-
-        /// <summary>
-        /// Information about the client where a user is allowed to navigate after the error page is displayed.
-        /// </summary>
-        /// <value>
-        /// The return information.
-        /// </value>
-        public ClientReturnInfo ReturnInfo { get; set; }
     }
 }

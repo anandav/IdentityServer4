@@ -1,74 +1,134 @@
 ﻿// Copyright (c) Brock Allen & Dominick Baier. All rights reserved.
 // Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
 
+
 using IdentityModel;
 using IdentityServer4.Endpoints.Results;
+using IdentityServer4.Events;
+using IdentityServer4.Extensions;
 using IdentityServer4.Hosting;
 using IdentityServer4.ResponseHandling;
+using IdentityServer4.Services;
 using IdentityServer4.Validation;
-using Microsoft.AspNet.Http;
+using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 
 namespace IdentityServer4.Endpoints
 {
-    public class TokenEndpoint : IEndpoint
+    /// <summary>
+    /// The token endpoint
+    /// </summary>
+    /// <seealso cref="IdentityServer4.Hosting.IEndpoint" />
+    class TokenEndpoint : IEndpoint
     {
         private readonly ClientSecretValidator _clientValidator;
-        private readonly ILogger _logger;
         private readonly ITokenRequestValidator _requestValidator;
         private readonly ITokenResponseGenerator _responseGenerator;
+        private readonly IEventService _events;
+        private readonly ILogger _logger;
 
-        public TokenEndpoint(ITokenRequestValidator requestValidator, ClientSecretValidator clientValidator, ITokenResponseGenerator responseGenerator, ILogger<TokenEndpoint> logger)
+        /// <summary>
+        /// Initializes a new instance of the <see cref="TokenEndpoint" /> class.
+        /// </summary>
+        /// <param name="clientValidator">The client validator.</param>
+        /// <param name="requestValidator">The request validator.</param>
+        /// <param name="responseGenerator">The response generator.</param>
+        /// <param name="events">The events.</param>
+        /// <param name="logger">The logger.</param>
+        public TokenEndpoint(ClientSecretValidator clientValidator, ITokenRequestValidator requestValidator, ITokenResponseGenerator responseGenerator, IEventService events, ILogger<TokenEndpoint> logger)
         {
-            _requestValidator = requestValidator;
             _clientValidator = clientValidator;
+            _requestValidator = requestValidator;
             _responseGenerator = responseGenerator;
+            _events = events;
             _logger = logger;
         }
 
-        public async Task<IEndpointResult> ProcessAsync(IdentityServerContext context)
+        /// <summary>
+        /// Processes the request.
+        /// </summary>
+        /// <param name="context">The HTTP context.</param>
+        /// <returns></returns>
+        public async Task<IEndpointResult> ProcessAsync(HttpContext context)
         {
             _logger.LogTrace("Processing token request.");
 
             // validate HTTP
-            if (context.HttpContext.Request.Method != "POST" || !context.HttpContext.Request.HasFormContentType)
+            if (context.Request.Method != "POST" || !context.Request.HasFormContentType)
             {
                 _logger.LogWarning("Invalid HTTP request for token endpoint");
-                return new TokenErrorResult(OidcConstants.TokenErrors.InvalidRequest);
+                return Error(OidcConstants.TokenErrors.InvalidRequest);
             }
 
             return await ProcessTokenRequestAsync(context);
         }
 
-        private async Task<IEndpointResult> ProcessTokenRequestAsync(IdentityServerContext context)
+        private async Task<IEndpointResult> ProcessTokenRequestAsync(HttpContext context)
         {
-            _logger.LogInformation("Start token request.");
+            _logger.LogDebug("Start token request.");
 
             // validate client
-            var clientResult = await _clientValidator.ValidateAsync(context.HttpContext);
+            var clientResult = await _clientValidator.ValidateAsync(context);
 
             if (clientResult.Client == null)
             {
-                return new TokenErrorResult(OidcConstants.TokenErrors.InvalidClient);
+                return Error(OidcConstants.TokenErrors.InvalidClient);
             }
 
             // validate request
-            var requestResult = await _requestValidator.ValidateRequestAsync(
-                context.HttpContext.Request.Form.AsNameValueCollection(),
-                clientResult.Client);
+            var form = (await context.Request.ReadFormAsync()).AsNameValueCollection();
+            _logger.LogTrace("Calling into token request validator: {type}", _requestValidator.GetType().FullName);
+            var requestResult = await _requestValidator.ValidateRequestAsync(form, clientResult.Client);
 
             if (requestResult.IsError)
             {
-                return new TokenErrorResult(requestResult.Error, requestResult.ErrorDescription);
+                await _events.RaiseAsync(new TokenIssuedFailureEvent(requestResult));
+                return Error(requestResult.Error, requestResult.ErrorDescription, requestResult.CustomResponse);
             }
 
             // create response
-            var response = await _responseGenerator.ProcessAsync(requestResult.ValidatedRequest);
+            _logger.LogTrace("Calling into token request response generator: {type}", _responseGenerator.GetType().FullName);
+            var response = await _responseGenerator.ProcessAsync(requestResult);
+
+            await _events.RaiseAsync(new TokenIssuedSuccessEvent(response, requestResult));
+            LogTokens(response, requestResult);
 
             // return result
-            _logger.LogInformation("Token request success.");
+            _logger.LogDebug("Token request success.");
             return new TokenResult(response);
+        }
+
+        private TokenErrorResult Error(string error, string errorDescription = null, Dictionary<string, object> custom = null)
+        {
+            var response = new TokenErrorResponse
+            {
+                Error = error,
+                ErrorDescription = errorDescription,
+                Custom = custom
+            };
+
+            return new TokenErrorResult(response);
+        }
+
+        private void LogTokens(TokenResponse response, TokenRequestValidationResult requestResult)
+        {
+            var clientId = $"{requestResult.ValidatedRequest.Client.ClientId} ({requestResult.ValidatedRequest.Client?.ClientName ?? "no name set"})";
+            var subjectId = requestResult.ValidatedRequest.Subject?.GetSubjectId() ?? "no subject";
+
+            if (response.IdentityToken != null)
+            {
+                _logger.LogTrace("Identity token issued for {clientId} / {subjectId}: {token}", clientId, subjectId, response.IdentityToken);
+            }
+            if (response.RefreshToken != null)
+            {
+                _logger.LogTrace("Refresh token issued for {clientId} / {subjectId}: {token}", clientId, subjectId, response.RefreshToken);
+            }
+            if (response.AccessToken != null)
+            {
+                _logger.LogTrace("Access token issued for {clientId} / {subjectId}: {token}", clientId, subjectId, response.AccessToken);
+            }
         }
     }
 }

@@ -1,6 +1,7 @@
 ﻿// Copyright (c) Brock Allen & Dominick Baier. All rights reserved.
 // Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
 
+
 using System;
 
 namespace IdentityServer4.Models
@@ -32,7 +33,7 @@ namespace IdentityServer4.Models
         /// <value>
         /// The expiration.
         /// </value>
-        public DateTimeOffset? Expiration { get; set; }
+        public DateTime? Expiration { get; set; }
 
         /// <summary>
         /// Gets or sets the type of the client secret.
@@ -47,7 +48,7 @@ namespace IdentityServer4.Models
         /// </summary>
         public Secret()
         {
-            Type = Constants.SecretTypes.SharedSecret;
+            Type = IdentityServerConstants.SecretTypes.SharedSecret;
         }
 
         /// <summary>
@@ -55,7 +56,7 @@ namespace IdentityServer4.Models
         /// </summary>
         /// <param name="value">The value.</param>
         /// <param name="expiration">The expiration.</param>
-        public Secret(string value, DateTimeOffset? expiration = null)
+        public Secret(string value, DateTime? expiration = null)
             : this()
         {
             Value = value;
@@ -68,12 +69,48 @@ namespace IdentityServer4.Models
         /// <param name="value">The value.</param>
         /// <param name="description">The description.</param>
         /// <param name="expiration">The expiration.</param>
-        public Secret(string value, string description, DateTimeOffset? expiration = null)
+        public Secret(string value, string description, DateTime? expiration = null)
             : this()
         {
             Description = description;
             Value = value;
             Expiration = expiration;
+        }
+
+        /// <summary>
+        /// Returns a hash code for this instance.
+        /// </summary>
+        /// <returns>
+        /// A hash code for this instance, suitable for use in hashing algorithms and data structures like a hash table. 
+        /// </returns>
+        public override int GetHashCode()
+        {
+            unchecked
+            {
+                int hash = 17;
+                hash = hash * 23 + Value?.GetHashCode() ?? 0;
+                hash = hash * 23 + Type?.GetHashCode() ?? 0;
+
+                return hash;
+            }
+        }
+
+        /// <summary>
+        /// Determines whether the specified <see cref="System.Object" />, is equal to this instance.
+        /// </summary>
+        /// <param name="obj">The <see cref="System.Object" /> to compare with this instance.</param>
+        /// <returns>
+        ///   <c>true</c> if the specified <see cref="System.Object" /> is equal to this instance; otherwise, <c>false</c>.
+        /// </returns>
+        public override bool Equals(object obj)
+        {
+            if (obj == null) return false;
+            var other = obj as Secret;
+            if (other == null) return false;
+            if (Object.ReferenceEquals(other, this)) return true;
+
+            return String.Equals(other.Type, Type, StringComparison.Ordinal) && 
+                String.Equals(other.Value, Value, StringComparison.Ordinal);
         }
     }
 }

@@ -1,10 +1,12 @@
 ﻿// Copyright (c) Brock Allen & Dominick Baier. All rights reserved.
 // Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
 
+
 using IdentityModel;
 using IdentityServer4.Extensions;
 using IdentityServer4.Models;
 using IdentityServer4.Services;
+using IdentityServer4.Stores;
 using IdentityServer4.Validation;
 using Microsoft.Extensions.Logging;
 using System;
@@ -13,156 +15,275 @@ using System.Threading.Tasks;
 
 namespace IdentityServer4.ResponseHandling
 {
+    /// <summary>
+    /// The default token response generator
+    /// </summary>
+    /// <seealso cref="IdentityServer4.ResponseHandling.ITokenResponseGenerator" />
     public class TokenResponseGenerator : ITokenResponseGenerator
     {
-        private ILogger _logger;
-        private readonly ITokenService _tokenService;
-        private readonly IRefreshTokenService _refreshTokenService;
-        private readonly IScopeStore _scopes;
-       
-        public TokenResponseGenerator(ITokenService tokenService, IRefreshTokenService refreshTokenService, IScopeStore scopes, ILoggerFactory loggerFactory)
+        /// <summary>
+        /// The logger
+        /// </summary>
+        protected readonly ILogger Logger;
+
+        /// <summary>
+        /// The token service
+        /// </summary>
+        protected readonly ITokenService TokenService;
+
+        /// <summary>
+        /// The refresh token service
+        /// </summary>
+        protected readonly IRefreshTokenService RefreshTokenService;
+
+        /// <summary>
+        /// The resource store
+        /// </summary>
+        protected readonly IResourceStore Resources;
+
+        /// <summary>
+        /// The clients store
+        /// </summary>
+        protected readonly IClientStore Clients;
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="TokenResponseGenerator" /> class.
+        /// </summary>
+        /// <param name="tokenService">The token service.</param>
+        /// <param name="refreshTokenService">The refresh token service.</param>
+        /// <param name="resources">The resources.</param>
+        /// <param name="clients">The clients.</param>
+        /// <param name="logger">The logger.</param>
+        public TokenResponseGenerator(ITokenService tokenService, IRefreshTokenService refreshTokenService, IResourceStore resources, IClientStore clients, ILogger<TokenResponseGenerator> logger)
         {
-            _tokenService = tokenService;
-            _refreshTokenService = refreshTokenService;
-            _scopes = scopes;
-            _logger = loggerFactory.CreateLogger<TokenResponseGenerator>();
+            TokenService = tokenService;
+            RefreshTokenService = refreshTokenService;
+            Resources = resources;
+            Clients = clients;
+            Logger = logger;
         }
 
-        public async Task<TokenResponse> ProcessAsync(ValidatedTokenRequest request)
+        /// <summary>
+        /// Processes the response.
+        /// </summary>
+        /// <param name="request">The request.</param>
+        /// <returns></returns>
+        public virtual async Task<TokenResponse> ProcessAsync(TokenRequestValidationResult request)
         {
-            _logger.LogTrace("Creating token response");
-
-            if (request.GrantType == OidcConstants.GrantTypes.AuthorizationCode)
+            switch (request.ValidatedRequest.GrantType)
             {
-                return await ProcessAuthorizationCodeRequestAsync(request);
+                case OidcConstants.GrantTypes.ClientCredentials:
+                    return await ProcessClientCredentialsRequestAsync(request);
+                case OidcConstants.GrantTypes.Password:
+                    return await ProcessPasswordRequestAsync(request);
+                case OidcConstants.GrantTypes.AuthorizationCode:
+                    return await ProcessAuthorizationCodeRequestAsync(request);
+                case OidcConstants.GrantTypes.RefreshToken:
+                    return await ProcessRefreshTokenRequestAsync(request);
+                default:
+                    return await ProcessExtensionGrantRequestAsync(request);
             }
-
-            if (request.GrantType == OidcConstants.GrantTypes.RefreshToken)
-            {
-                return await ProcessRefreshTokenRequestAsync(request);
-            }
-
-            return await ProcessTokenRequestAsync(request);
         }
 
-        private async Task<TokenResponse> ProcessAuthorizationCodeRequestAsync(ValidatedTokenRequest request)
+        /// <summary>
+        /// Creates the response for an client credentials request.
+        /// </summary>
+        /// <param name="request">The request.</param>
+        /// <returns></returns>
+        protected virtual Task<TokenResponse> ProcessClientCredentialsRequestAsync(TokenRequestValidationResult request)
         {
-            _logger.LogTrace("Processing authorization code request");
+            Logger.LogTrace("Creating response for client credentials request");
+
+            return ProcessTokenRequestAsync(request);
+        }
+
+        /// <summary>
+        /// Creates the response for a password request.
+        /// </summary>
+        /// <param name="request">The request.</param>
+        /// <returns></returns>
+        protected virtual Task<TokenResponse> ProcessPasswordRequestAsync(TokenRequestValidationResult request)
+        {
+            Logger.LogTrace("Creating response for password request");
+
+            return ProcessTokenRequestAsync(request);
+        }
+
+        /// <summary>
+        /// Creates the response for an authorization code request.
+        /// </summary>
+        /// <param name="request">The request.</param>
+        /// <returns></returns>
+        /// <exception cref="System.InvalidOperationException">Client does not exist anymore.</exception>
+        protected virtual async Task<TokenResponse> ProcessAuthorizationCodeRequestAsync(TokenRequestValidationResult request)
+        {
+            Logger.LogTrace("Creating response for authorization code request");
 
             //////////////////////////
             // access token
             /////////////////////////
-            var accessToken = await CreateAccessTokenAsync(request);
+            (var accessToken, var refreshToken) = await CreateAccessTokenAsync(request.ValidatedRequest);
             var response = new TokenResponse
             {
-                AccessToken = accessToken.Item1,
-                AccessTokenLifetime = request.Client.AccessTokenLifetime
+                AccessToken = accessToken,
+                AccessTokenLifetime = request.ValidatedRequest.AccessTokenLifetime
             };
 
             //////////////////////////
             // refresh token
             /////////////////////////
-            if (accessToken.Item2.IsPresent())
+            if (refreshToken.IsPresent())
             {
-                response.RefreshToken = accessToken.Item2;
+                response.RefreshToken = refreshToken;
             }
 
             //////////////////////////
             // id token
             /////////////////////////
-            if (request.AuthorizationCode.IsOpenId)
+            if (request.ValidatedRequest.AuthorizationCode.IsOpenId)
             {
+                // load the client that belongs to the authorization code
+                Client client = null;
+                if (request.ValidatedRequest.AuthorizationCode.ClientId != null)
+                {
+                    client = await Clients.FindEnabledClientByIdAsync(request.ValidatedRequest.AuthorizationCode.ClientId);
+                }
+                if (client == null)
+                {
+                    throw new InvalidOperationException("Client does not exist anymore.");
+                }
+
+                var resources = await Resources.FindEnabledResourcesByScopeAsync(request.ValidatedRequest.AuthorizationCode.RequestedScopes);
+
                 var tokenRequest = new TokenCreationRequest
                 {
-                    Subject = request.AuthorizationCode.Subject,
-                    Client = request.AuthorizationCode.Client,
-                    Scopes = request.AuthorizationCode.RequestedScopes,
-                    Nonce = request.AuthorizationCode.Nonce,
-
-                    ValidatedRequest = request
+                    Subject = request.ValidatedRequest.AuthorizationCode.Subject,
+                    Resources = resources,
+                    Nonce = request.ValidatedRequest.AuthorizationCode.Nonce,
+                    AccessTokenToHash = response.AccessToken,
+                    ValidatedRequest = request.ValidatedRequest
                 };
 
-                var idToken = await _tokenService.CreateIdentityTokenAsync(tokenRequest);
-                var jwt = await _tokenService.CreateSecurityTokenAsync(idToken);
+                var idToken = await TokenService.CreateIdentityTokenAsync(tokenRequest);
+                var jwt = await TokenService.CreateSecurityTokenAsync(idToken);
                 response.IdentityToken = jwt;
             }
 
             return response;
         }
 
-        private async Task<TokenResponse> ProcessTokenRequestAsync(ValidatedTokenRequest request)
+        /// <summary>
+        /// Creates the response for a refresh token request.
+        /// </summary>
+        /// <param name="request">The request.</param>
+        /// <returns></returns>
+        protected virtual async Task<TokenResponse> ProcessRefreshTokenRequestAsync(TokenRequestValidationResult request)
         {
-            _logger.LogTrace("Processing token request");
+            Logger.LogTrace("Creating response for refresh token request");
 
-            var accessToken = await CreateAccessTokenAsync(request);
+            var oldAccessToken = request.ValidatedRequest.RefreshToken.AccessToken;
+            string accessTokenString;
+
+            if (request.ValidatedRequest.Client.UpdateAccessTokenClaimsOnRefresh)
+            {
+                var subject = request.ValidatedRequest.RefreshToken.Subject;
+
+                var creationRequest = new TokenCreationRequest
+                {
+                    Subject = subject,
+                    ValidatedRequest = request.ValidatedRequest,
+                    Resources = await Resources.FindEnabledResourcesByScopeAsync(oldAccessToken.Scopes)
+                };
+
+                var newAccessToken = await TokenService.CreateAccessTokenAsync(creationRequest);
+                accessTokenString = await TokenService.CreateSecurityTokenAsync(newAccessToken);
+            }
+            else
+            {
+                oldAccessToken.CreationTime = IdentityServerDateTime.UtcNow;
+                oldAccessToken.Lifetime = request.ValidatedRequest.AccessTokenLifetime;
+
+                accessTokenString = await TokenService.CreateSecurityTokenAsync(oldAccessToken);
+            }
+
+            var handle = await RefreshTokenService.UpdateRefreshTokenAsync(request.ValidatedRequest.RefreshTokenHandle, request.ValidatedRequest.RefreshToken, request.ValidatedRequest.Client);
+
+            return new TokenResponse
+            {
+                IdentityToken = await CreateIdTokenFromRefreshTokenRequestAsync(request.ValidatedRequest, accessTokenString),
+                AccessToken = accessTokenString,
+                AccessTokenLifetime = request.ValidatedRequest.AccessTokenLifetime,
+                RefreshToken = handle
+            };
+        }
+
+        /// <summary>
+        /// Creates the response for an extension grant request.
+        /// </summary>
+        /// <param name="request">The request.</param>
+        /// <returns></returns>
+        protected virtual Task<TokenResponse> ProcessExtensionGrantRequestAsync(TokenRequestValidationResult request)
+        {
+            Logger.LogTrace("Creating response for extension grant request");
+
+            return ProcessTokenRequestAsync(request);
+        }
+
+        /// <summary>
+        /// Creates the response for a token request.
+        /// </summary>
+        /// <param name="validationResult">The validation result.</param>
+        /// <returns></returns>
+        protected virtual async Task<TokenResponse> ProcessTokenRequestAsync(TokenRequestValidationResult validationResult)
+        {
+            (var accessToken, var refreshToken) = await CreateAccessTokenAsync(validationResult.ValidatedRequest);
             var response = new TokenResponse
             {
-                AccessToken = accessToken.Item1,
-                AccessTokenLifetime = request.Client.AccessTokenLifetime
+                AccessToken = accessToken,
+                AccessTokenLifetime = validationResult.ValidatedRequest.AccessTokenLifetime,
+                Custom = validationResult.CustomResponse
             };
 
-            if (accessToken.Item2.IsPresent())
+            if (refreshToken.IsPresent())
             {
-                response.RefreshToken = accessToken.Item2;
+                response.RefreshToken = refreshToken;
             }
 
             return response;
         }
 
-        private async Task<TokenResponse> ProcessRefreshTokenRequestAsync(ValidatedTokenRequest request)
-        {
-            _logger.LogTrace("Processing refresh token request");
-
-            var oldAccessToken = request.RefreshToken.AccessToken;
-            string accessTokenString;
-            
-            if (request.Client.UpdateAccessTokenClaimsOnRefresh)
-            {
-                var subject = request.RefreshToken.GetOriginalSubject();
-
-                var creationRequest = new TokenCreationRequest
-                {
-                    Client = request.Client,
-                    Subject = subject,
-                    ValidatedRequest = request,
-                    Scopes = await _scopes.FindScopesAsync(oldAccessToken.Scopes)
-                };
-
-                var newAccessToken = await _tokenService.CreateAccessTokenAsync(creationRequest);
-                accessTokenString = await _tokenService.CreateSecurityTokenAsync(newAccessToken);
-            }
-            else
-            {
-                oldAccessToken.CreationTime = DateTimeOffsetHelper.UtcNow;
-                oldAccessToken.Lifetime = request.Client.AccessTokenLifetime;
-
-                accessTokenString = await _tokenService.CreateSecurityTokenAsync(oldAccessToken);
-            }
-
-            var handle = await _refreshTokenService.UpdateRefreshTokenAsync(request.RefreshTokenHandle, request.RefreshToken, request.Client);
-
-            return new TokenResponse
-                {
-                    AccessToken = accessTokenString,
-                    AccessTokenLifetime = request.Client.AccessTokenLifetime,
-                    RefreshToken = handle
-                };
-        }
-
-        private async Task<Tuple<string, string>> CreateAccessTokenAsync(ValidatedTokenRequest request)
+        /// <summary>
+        /// Creates the access/refresh token.
+        /// </summary>
+        /// <param name="request">The request.</param>
+        /// <returns></returns>
+        /// <exception cref="System.InvalidOperationException">Client does not exist anymore.</exception>
+        protected virtual async Task<(string accessToken, string refreshToken)> CreateAccessTokenAsync(ValidatedTokenRequest request)
         {
             TokenCreationRequest tokenRequest;
             bool createRefreshToken;
 
             if (request.AuthorizationCode != null)
             {
-                createRefreshToken = request.AuthorizationCode.RequestedScopes.Select(s => s.Name).Contains(Constants.StandardScopes.OfflineAccess);
-                
+                createRefreshToken = request.AuthorizationCode.RequestedScopes.Contains(IdentityServerConstants.StandardScopes.OfflineAccess);
+
+                // load the client that belongs to the authorization code
+                Client client = null;
+                if (request.AuthorizationCode.ClientId != null)
+                {
+                    client = await Clients.FindEnabledClientByIdAsync(request.AuthorizationCode.ClientId);
+                }
+                if (client == null)
+                {
+                    throw new InvalidOperationException("Client does not exist anymore.");
+                }
+
+                var resources = await Resources.FindEnabledResourcesByScopeAsync(request.AuthorizationCode.RequestedScopes);
+
                 tokenRequest = new TokenCreationRequest
                 {
                     Subject = request.AuthorizationCode.Subject,
-                    Client = request.AuthorizationCode.Client,
-                    Scopes = request.AuthorizationCode.RequestedScopes,
+                    Resources = resources,
                     ValidatedRequest = request
                 };
             }
@@ -173,22 +294,48 @@ namespace IdentityServer4.ResponseHandling
                 tokenRequest = new TokenCreationRequest
                 {
                     Subject = request.Subject,
-                    Client = request.Client,
-                    Scopes = request.ValidatedScopes.GrantedScopes,
+                    Resources = request.ValidatedScopes.GrantedResources,
                     ValidatedRequest = request
                 };
             }
 
-            Token accessToken = await _tokenService.CreateAccessTokenAsync(tokenRequest);
+            var at = await TokenService.CreateAccessTokenAsync(tokenRequest);
+            var accessToken = await TokenService.CreateSecurityTokenAsync(at);
 
-            string refreshToken = "";
             if (createRefreshToken)
             {
-                refreshToken = await _refreshTokenService.CreateRefreshTokenAsync(tokenRequest.Subject, accessToken, request.Client);
+                var refreshToken = await RefreshTokenService.CreateRefreshTokenAsync(tokenRequest.Subject, at, request.Client);
+                return (accessToken, refreshToken);
             }
 
-            var securityToken = await _tokenService.CreateSecurityTokenAsync(accessToken);
-            return Tuple.Create(securityToken, refreshToken);
+            return (accessToken, null);
+        }
+
+        /// <summary>
+        /// Creates an id_token for a refresh token request if identity resources have been requested.
+        /// </summary>
+        /// <param name="request">The request.</param>
+        /// <param name="newAccessToken">The new access token.</param>
+        /// <returns></returns>
+        protected virtual async Task<string> CreateIdTokenFromRefreshTokenRequestAsync(ValidatedTokenRequest request, string newAccessToken)
+        {
+            var resources = await Resources.FindResourcesByScopeAsync(request.RefreshToken.Scopes);
+            if (resources.IdentityResources.Any())
+            {
+                var oldAccessToken = request.RefreshToken.AccessToken;
+                var tokenRequest = new TokenCreationRequest
+                {
+                    Subject = request.RefreshToken.Subject,
+                    Resources = await Resources.FindEnabledResourcesByScopeAsync(oldAccessToken.Scopes),
+                    ValidatedRequest = request,
+                    AccessTokenToHash = newAccessToken
+                };
+
+                var idToken = await TokenService.CreateIdentityTokenAsync(tokenRequest);
+                return await TokenService.CreateSecurityTokenAsync(idToken);
+            }
+
+            return null;
         }
     }
 }

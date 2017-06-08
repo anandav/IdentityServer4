@@ -1,6 +1,7 @@
 ﻿// Copyright (c) Brock Allen & Dominick Baier. All rights reserved.
 // Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
 
+
 using Microsoft.AspNetCore.TestHost;
 using System.Collections.Generic;
 using System.Net.Http;
@@ -11,8 +12,9 @@ using System.Net;
 using IdentityModel.Client;
 using System.Linq;
 using Microsoft.AspNetCore.Hosting;
+using Newtonsoft.Json.Linq;
 
-namespace IdentityServer4.Tests.Endpoints.Introspection
+namespace IdentityServer4.IntegrationTests.Endpoints.Introspection
 {
     public class IntrospectionTests
     {
@@ -126,16 +128,16 @@ namespace IdentityServer4.Tests.Endpoints.Introspection
             response.IsError.Should().Be(false);
 
             var scopes = from c in response.Claims
-                         where c.Item1 == "scope"
+                         where c.Type == "scope"
                          select c;
 
             scopes.Count().Should().Be(1);
-            scopes.First().Item2.Should().Be("api1");
+            scopes.First().Value.Should().Be("api1");
         }
 
         [Fact]
         [Trait("Category", Category)]
-        public async Task Valid_Token_Valid_Unrestricted_Scope()
+        public async Task Response_data_should_be_valid_using_single_scope()
         {
             var tokenClient = new TokenClient(
                 TokenEndpoint,
@@ -143,11 +145,144 @@ namespace IdentityServer4.Tests.Endpoints.Introspection
                 "secret",
                 _handler);
 
-            var tokenResponse = await tokenClient.RequestClientCredentialsAsync("api1 api2 unrestricted.api");
+            var tokenResponse = await tokenClient.RequestClientCredentialsAsync("api1");
 
             var introspectionClient = new IntrospectionClient(
                 IntrospectionEndpoint,
-                "unrestricted.api",
+                "api1",
+                "secret",
+                _handler);
+
+            var response = await introspectionClient.SendAsync(new IntrospectionRequest
+            {
+                Token = tokenResponse.AccessToken
+            });
+
+            var values = response.Json.ToObject<Dictionary<string, object>>();
+
+            values["aud"].GetType().Name.Should().Be("JArray");
+
+            var audiences = ((JArray)values["aud"]);
+            foreach (var aud in audiences)
+            {
+                aud.Type.Should().Be(JTokenType.String);
+            }
+
+            values["iss"].GetType().Name.Should().Be("String");
+            values["nbf"].GetType().Name.Should().Be("Int64");
+            values["exp"].GetType().Name.Should().Be("Int64");
+            values["client_id"].GetType().Name.Should().Be("String");
+            values["active"].GetType().Name.Should().Be("Boolean");
+            values["scope"].GetType().Name.Should().Be("String");
+
+            values["scope"].ToString().Should().Be("api1");
+        }
+
+        [Fact]
+        [Trait("Category", Category)]
+        public async Task Response_data_with_user_authentication_should_be_valid_using_single_scope()
+        {
+            var tokenClient = new TokenClient(
+                TokenEndpoint,
+                "ro.client",
+                "secret",
+                _handler);
+
+            var tokenResponse = await tokenClient.RequestResourceOwnerPasswordAsync("bob", "bob", "api1");
+            tokenResponse.IsError.Should().BeFalse();
+
+            var introspectionClient = new IntrospectionClient(
+                IntrospectionEndpoint,
+                "api1",
+                "secret",
+                _handler);
+
+            var response = await introspectionClient.SendAsync(new IntrospectionRequest
+            {
+                Token = tokenResponse.AccessToken
+            });
+
+            var values = response.Json.ToObject<Dictionary<string, object>>();
+
+            values["aud"].GetType().Name.Should().Be("JArray");
+
+            var audiences = ((JArray)values["aud"]);
+            foreach (var aud in audiences)
+            {
+                aud.Type.Should().Be(JTokenType.String);
+            }
+
+            values["iss"].GetType().Name.Should().Be("String");
+            values["nbf"].GetType().Name.Should().Be("Int64");
+            values["exp"].GetType().Name.Should().Be("Int64");
+            values["auth_time"].GetType().Name.Should().Be("Int64");
+            values["client_id"].GetType().Name.Should().Be("String");
+            values["sub"].GetType().Name.Should().Be("String");
+            values["active"].GetType().Name.Should().Be("Boolean");
+            values["scope"].GetType().Name.Should().Be("String");
+
+            values["scope"].ToString().Should().Be("api1");
+        }
+
+        [Fact]
+        [Trait("Category", Category)]
+        public async Task Response_data_should_be_valid_using_multiple_scopes()
+        {
+            var tokenClient = new TokenClient(
+                TokenEndpoint,
+                "client1",
+                "secret",
+                _handler);
+
+            var tokenResponse = await tokenClient.RequestClientCredentialsAsync("api3-a api3-b");
+
+            var introspectionClient = new IntrospectionClient(
+                IntrospectionEndpoint,
+                "api3",
+                "secret",
+                _handler);
+
+            var response = await introspectionClient.SendAsync(new IntrospectionRequest
+            {
+                Token = tokenResponse.AccessToken
+            });
+
+            var values = response.Json.ToObject<Dictionary<string, object>>();
+
+            values["aud"].GetType().Name.Should().Be("JArray");
+
+            var audiences = ((JArray)values["aud"]);
+            foreach(var aud in audiences)
+            {
+                aud.Type.Should().Be(JTokenType.String);
+            }
+
+            values["iss"].GetType().Name.Should().Be("String"); 
+            values["nbf"].GetType().Name.Should().Be("Int64"); 
+            values["exp"].GetType().Name.Should().Be("Int64"); 
+            values["client_id"].GetType().Name.Should().Be("String"); 
+            values["active"].GetType().Name.Should().Be("Boolean"); 
+            values["scope"].GetType().Name.Should().Be("String");
+
+            var scopes = values["scope"].ToString();
+            scopes.Should().Be("api3-a api3-b");
+        }
+
+        [Fact]
+        [Trait("Category", Category)]
+        public async Task Valid_Token_Many_Scopes_Api_Only_See_Its_Scope()
+        {
+            var tokenClient = new TokenClient(
+                TokenEndpoint,
+                "client3",
+                "secret",
+                _handler);
+
+            var tokenResponse = await tokenClient.RequestClientCredentialsAsync("api1 api2 api3-a");
+
+            var introspectionClient = new IntrospectionClient(
+                IntrospectionEndpoint,
+                "api3",
                 "secret",
                 _handler);
 
@@ -160,10 +295,11 @@ namespace IdentityServer4.Tests.Endpoints.Introspection
             response.IsError.Should().Be(false);
 
             var scopes = from c in response.Claims
-                         where c.Item1 == "scope"
-                         select c;
+                         where c.Type == "scope"
+                         select c.Value;
 
-            scopes.Count().Should().Be(3);
+            scopes.Count().Should().Be(1);
+            scopes.First().Should().Be("api3-a");
         }
 
         [Fact]
@@ -193,11 +329,11 @@ namespace IdentityServer4.Tests.Endpoints.Introspection
             response.IsError.Should().Be(false);
 
             var scopes = from c in response.Claims
-                         where c.Item1 == "scope"
+                         where c.Type == "scope"
                          select c;
 
             scopes.Count().Should().Be(1);
-            scopes.First().Item2.Should().Be("api1");
+            scopes.First().Value.Should().Be("api1");
         }
 
         [Fact]

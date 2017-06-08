@@ -1,8 +1,8 @@
 ﻿// Copyright (c) Brock Allen & Dominick Baier. All rights reserved.
 // Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
 
+
 using IdentityModel;
-using IdentityServer4.Models;
 using System.Collections.Generic;
 
 namespace IdentityServer4.Validation
@@ -35,14 +35,6 @@ namespace IdentityServer4.Validation
         /// The the grant type.
         /// </value>
         public string GrantType { get; set; }
-
-        /// <summary>
-        /// Gets or sets the client.
-        /// </summary>
-        /// <value>
-        /// The client.
-        /// </value>
-        public Client Client { get; set; }
 
         /// <summary>
         /// Gets or sets the redirect URI.
@@ -101,12 +93,12 @@ namespace IdentityServer4.Validation
         public bool IsOpenIdRequest { get; set; }
 
         /// <summary>
-        /// Gets or sets a value indicating whether this instance is resource request.
+        /// Gets or sets a value indicating whether this instance is API resource request.
         /// </summary>
         /// <value>
-        /// <c>true</c> if this instance is resource request; otherwise, <c>false</c>.
+        /// <c>true</c> if this instance is API resource request; otherwise, <c>false</c>.
         /// </value>
-        public bool IsResourceRequest { get; set; }
+        public bool IsApiResourceRequest { get; set; }
 
         /// <summary>
         /// Gets or sets the nonce.
@@ -178,17 +170,11 @@ namespace IdentityServer4.Validation
         /// <value>
         /// <c>true</c> if an access token was requested; otherwise, <c>false</c>.
         /// </value>
-        public bool AccessTokenRequested
-        {
-            get
-            {
-                return (ResponseType == OidcConstants.ResponseTypes.IdTokenToken ||
-                        ResponseType == OidcConstants.ResponseTypes.Code ||
-                        ResponseType == OidcConstants.ResponseTypes.CodeIdToken ||
-                        ResponseType == OidcConstants.ResponseTypes.CodeToken ||
-                        ResponseType == OidcConstants.ResponseTypes.CodeIdTokenToken);
-            }
-        }
+        public bool AccessTokenRequested => (ResponseType == OidcConstants.ResponseTypes.IdTokenToken ||
+                                             ResponseType == OidcConstants.ResponseTypes.Code ||
+                                             ResponseType == OidcConstants.ResponseTypes.CodeIdToken ||
+                                             ResponseType == OidcConstants.ResponseTypes.CodeToken ||
+                                             ResponseType == OidcConstants.ResponseTypes.CodeIdTokenToken);
 
         /// <summary>
         /// Initializes a new instance of the <see cref="ValidatedAuthorizeRequest"/> class.

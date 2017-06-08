@@ -1,16 +1,16 @@
 ﻿// Copyright (c) Brock Allen & Dominick Baier. All rights reserved.
 // Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
 
+
 using FluentAssertions;
 using IdentityModel;
 using IdentityServer4.Configuration;
-using IdentityServer4.Validation;
+using IdentityServer4.UnitTests.Common;
 using System.Collections.Specialized;
 using System.Threading.Tasks;
-using UnitTests.Common;
 using Xunit;
 
-namespace IdentityServer4.Tests.Validation.AuthorizeRequest
+namespace IdentityServer4.UnitTests.Validation.AuthorizeRequest
 {
 
     public class Authorize_ClientValidation_IdToken
@@ -32,7 +32,6 @@ namespace IdentityServer4.Tests.Validation.AuthorizeRequest
             var result = await validator.ValidateAsync(parameters);
             
             result.IsError.Should().BeTrue();
-            result.ErrorType.Should().Be(ErrorTypes.Client);
             result.Error.Should().Be(OidcConstants.AuthorizeErrors.InvalidScope);
         }
     }

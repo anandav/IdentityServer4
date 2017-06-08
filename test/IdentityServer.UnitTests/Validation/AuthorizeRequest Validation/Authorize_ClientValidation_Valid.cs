@@ -1,23 +1,22 @@
 ﻿// Copyright (c) Brock Allen & Dominick Baier. All rights reserved.
 // Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
 
+
 using FluentAssertions;
 using IdentityModel;
 using IdentityServer4.Configuration;
+using IdentityServer4.UnitTests.Common;
 using System.Collections.Specialized;
 using System.Threading.Tasks;
-using UnitTests.Common;
 using Xunit;
 
-namespace IdentityServer4.Tests.Validation.AuthorizeRequest
+namespace IdentityServer4.UnitTests.Validation.AuthorizeRequest
 {
-
     public class Authorize_ClientValidation_Valid
     {
         const string Category = "AuthorizeRequest Client Validation - Valid";
 
         IdentityServerOptions _options = TestIdentityServerOptions.Create();
-
 
         [Fact]
         [Trait("Category", Category)]
@@ -215,6 +214,23 @@ namespace IdentityServer4.Tests.Validation.AuthorizeRequest
             var validator = Factory.CreateAuthorizeRequestValidator();
             var result = await validator.ValidateAsync(parameters);
             
+            result.IsError.Should().BeFalse();
+        }
+
+        [Fact]
+        [Trait("Category", "AuthorizeRequest Client Validation - Valid")]
+        public async Task Valid_OpenId_TokenIdToken_Request()
+        {
+            var parameters = new NameValueCollection();
+            parameters.Add(OidcConstants.AuthorizeRequest.ClientId, "implicitclient");
+            parameters.Add(OidcConstants.AuthorizeRequest.Scope, "openid");
+            parameters.Add(OidcConstants.AuthorizeRequest.RedirectUri, "oob://implicit/cb");
+            parameters.Add(OidcConstants.AuthorizeRequest.ResponseType, "token id_token"); // Unconventional order
+            parameters.Add(OidcConstants.AuthorizeRequest.Nonce, "abc");
+
+            var validator = Factory.CreateAuthorizeRequestValidator();
+            var result = await validator.ValidateAsync(parameters);
+
             result.IsError.Should().BeFalse();
         }
     }

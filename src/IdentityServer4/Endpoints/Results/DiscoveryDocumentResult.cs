@@ -1,49 +1,62 @@
 ﻿// Copyright (c) Brock Allen & Dominick Baier. All rights reserved.
 // Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
 
+
 using IdentityServer4.Hosting;
-using IdentityServer4.Models;
-using Microsoft.AspNet.Http;
-using Newtonsoft.Json.Linq;
+using Microsoft.AspNetCore.Http;
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Threading.Tasks;
 
 namespace IdentityServer4.Endpoints.Results
 {
+    /// <summary>
+    /// Result for a discovery document
+    /// </summary>
+    /// <seealso cref="IdentityServer4.Hosting.IEndpointResult" />
     public class DiscoveryDocumentResult : IEndpointResult
     {
-        public DiscoveryDocument Document { get; private set; }
-        public Dictionary<string, object> CustomEntries { get; private set; }
+        /// <summary>
+        /// Gets the entries.
+        /// </summary>
+        /// <value>
+        /// The entries.
+        /// </value>
+        public Dictionary<string, object> Entries { get; }
 
-        public DiscoveryDocumentResult(DiscoveryDocument document, Dictionary<string, object> customEntries)
+        /// <summary>
+        /// Gets the maximum age.
+        /// </summary>
+        /// <value>
+        /// The maximum age.
+        /// </value>
+        public int? MaxAge { get; }
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="DiscoveryDocumentResult" /> class.
+        /// </summary>
+        /// <param name="entries">The entries.</param>
+        /// <param name="maxAge">The maximum age.</param>
+        /// <exception cref="System.ArgumentNullException">entries</exception>
+        public DiscoveryDocumentResult(Dictionary<string, object> entries, int? maxAge)
         {
-            Document = document;
-            CustomEntries = customEntries;
+            Entries = entries ?? throw new ArgumentNullException(nameof(entries));
+            MaxAge = maxAge;
         }
-        
-        public Task ExecuteAsync(IdentityServerContext context)
+
+        /// <summary>
+        /// Executes the result.
+        /// </summary>
+        /// <param name="context">The HTTP context.</param>
+        /// <returns></returns>
+        public Task ExecuteAsync(HttpContext context)
         {
-            if (CustomEntries != null && CustomEntries.Any())
+            if (MaxAge.HasValue && MaxAge.Value >= 0)
             {
-                var jobject = JObject.FromObject(Document);
-
-                foreach (var item in CustomEntries)
-                {
-                    JToken token;
-                    if (jobject.TryGetValue(item.Key, out token))
-                    {
-                        throw new Exception("Item does already exist - cannot add it via a custom entry: " + item.Key);
-                    }
-
-                    jobject.Add(new JProperty(item.Key, item.Value));
-
-                    return context.HttpContext.Response.WriteJsonAsync(jobject);
-                }
+                context.Response.SetCache(MaxAge.Value);
             }
 
-            return context.HttpContext.Response.WriteJsonAsync(Document);
+            return context.Response.WriteJsonAsync(ObjectSerializer.ToJObject(Entries));
         }
     }
 }

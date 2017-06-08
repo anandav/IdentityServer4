@@ -1,6 +1,7 @@
 ﻿// Copyright (c) Brock Allen & Dominick Baier. All rights reserved.
 // Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
 
+
 using IdentityModel;
 using IdentityServer4.Extensions;
 using IdentityServer4.Validation;
@@ -25,15 +26,15 @@ namespace IdentityServer4.Logging
 
         public Dictionary<string, string> Raw { get; set; }
 
+        static readonly string[] SensitiveValuesFilter = {
+            OidcConstants.TokenRequest.ClientSecret,
+            OidcConstants.TokenRequest.Password,
+            OidcConstants.TokenRequest.ClientAssertion
+        };
+
         public TokenRequestValidationLog(ValidatedTokenRequest request)
         {
-            const string scrubValue = "******";
-            Raw = request.Raw.ToDictionary();
-
-            if (Raw.ContainsKey(OidcConstants.TokenRequest.Password))
-            {
-                Raw[OidcConstants.TokenRequest.Password] = scrubValue;
-            }
+            Raw = request.Raw.ToScrubbedDictionary(SensitiveValuesFilter);
 
             if (request.Client != null)
             {
@@ -44,13 +45,6 @@ namespace IdentityServer4.Logging
             if (request.Scopes != null)
             {
                 Scopes = request.Scopes.ToSpaceSeparatedString();
-            }
-
-            if (request.SignInMessage != null)
-            {
-                IdP = request.SignInMessage.IdP;
-                Tenant = request.SignInMessage.Tenant;
-                AuthenticationContextReferenceClasses = request.SignInMessage.AcrValues;
             }
 
             GrantType = request.GrantType;

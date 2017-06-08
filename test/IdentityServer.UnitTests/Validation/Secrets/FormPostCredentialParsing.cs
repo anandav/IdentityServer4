@@ -1,8 +1,10 @@
 ﻿// Copyright (c) Brock Allen & Dominick Baier. All rights reserved.
 // Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
 
+
 using FluentAssertions;
 using IdentityServer4.Configuration;
+using IdentityServer4.UnitTests.Common;
 using IdentityServer4.Validation;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
@@ -10,11 +12,12 @@ using System.IO;
 using System.Text;
 using Xunit;
 
-namespace IdentityServer4.Tests.Validation.Secrets
+namespace IdentityServer4.UnitTests.Validation.Secrets
 {
     public class FormPostCredentialExtraction
     {
         const string Category = "Secrets - Form Post Secret Parsing";
+
         IdentityServerOptions _options;
         PostBodySecretParser _parser;
 
@@ -25,6 +28,7 @@ namespace IdentityServer4.Tests.Validation.Secrets
         }
 
         [Fact]
+        [Trait("Category", Category)]
         public async void EmptyContext()
         {
             var context = new DefaultHttpContext();
@@ -36,6 +40,7 @@ namespace IdentityServer4.Tests.Validation.Secrets
         }
 
         [Fact]
+        [Trait("Category", Category)]
         public async void Valid_PostBody()
         {
             var context = new DefaultHttpContext();
@@ -47,12 +52,13 @@ namespace IdentityServer4.Tests.Validation.Secrets
 
             var secret = await _parser.ParseAsync(context);
 
-            secret.Type.Should().Be(Constants.ParsedSecretTypes.SharedSecret);
+            secret.Type.Should().Be(IdentityServerConstants.ParsedSecretTypes.SharedSecret);
             secret.Id.Should().Be("client");
             secret.Credential.Should().Be("secret");
         }
 
         [Fact]
+        [Trait("Category", Category)]
         public async void ClientId_Too_Long()
         {
             var context = new DefaultHttpContext();
@@ -69,6 +75,7 @@ namespace IdentityServer4.Tests.Validation.Secrets
         }
 
         [Fact]
+        [Trait("Category", Category)]
         public async void ClientSecret_Too_Long()
         {
             var context = new DefaultHttpContext();
@@ -85,6 +92,7 @@ namespace IdentityServer4.Tests.Validation.Secrets
         }
 
         [Fact]
+        [Trait("Category", Category)]
         public async void Missing_ClientId()
         {
             var context = new DefaultHttpContext();
@@ -100,6 +108,7 @@ namespace IdentityServer4.Tests.Validation.Secrets
         }
 
         [Fact]
+        [Trait("Category", Category)]
         public async void Missing_ClientSecret()
         {
             var context = new DefaultHttpContext();
@@ -112,10 +121,11 @@ namespace IdentityServer4.Tests.Validation.Secrets
             var secret = await _parser.ParseAsync(context);
 
             secret.Should().NotBeNull();
-            secret.Type.Should().Be(Constants.ParsedSecretTypes.NoSecret);
+            secret.Type.Should().Be(IdentityServerConstants.ParsedSecretTypes.NoSecret);
         }
 
         [Fact]
+        [Trait("Category", Category)]
         public async void Malformed_PostBody()
         {
             var context = new DefaultHttpContext();

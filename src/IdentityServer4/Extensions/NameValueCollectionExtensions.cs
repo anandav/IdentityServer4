@@ -1,6 +1,7 @@
 ﻿// Copyright (c) Brock Allen & Dominick Baier. All rights reserved.
 // Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
 
+
 using System;
 using System.Linq;
 using System.Collections.Generic;
@@ -43,7 +44,7 @@ namespace IdentityServer4.Extensions
         public static string ToFormPost(this NameValueCollection collection)
         {
             var builder = new StringBuilder(128);
-            const string inputFieldFormat = "<input type=\"hidden\" name=\"{0}\" value=\"{1}\" />\n";
+            const string inputFieldFormat = "<input type='hidden' name='{0}' value='{1}' />\n";
 
             foreach (string name in collection)
             {
@@ -79,8 +80,13 @@ namespace IdentityServer4.Extensions
 
         public static Dictionary<string, string> ToDictionary(this NameValueCollection collection)
         {
+            return collection.ToScrubbedDictionary();
+        }
+
+        public static Dictionary<string, string> ToScrubbedDictionary(this NameValueCollection collection, params string[] nameFilter)
+        {
             var dict = new Dictionary<string, string>();
-            
+
             if (collection == null || collection.Count == 0)
             {
                 return dict;
@@ -91,6 +97,10 @@ namespace IdentityServer4.Extensions
                 var value = collection.Get(name);
                 if (value != null)
                 {
+                    if (nameFilter.Contains(name))
+                    {
+                        value = "***REDACTED***";
+                    }
                     dict.Add(name, value);
                 }
             }

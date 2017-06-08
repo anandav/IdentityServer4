@@ -1,6 +1,7 @@
 ﻿// Copyright (c) Brock Allen & Dominick Baier. All rights reserved.
 // Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
 
+
 using IdentityModel;
 using System;
 using System.Collections.Generic;
@@ -21,9 +22,9 @@ namespace IdentityServer4.Extensions
         /// <param name="principal">The principal.</param>
         /// <returns></returns>
         [DebuggerStepThrough]
-        public static DateTimeOffset GetAuthenticationTime(this IPrincipal principal)
+        public static DateTime GetAuthenticationTime(this IPrincipal principal)
         {
-            return principal.GetAuthenticationTimeEpoch().ToDateTimeOffsetFromEpoch();
+            return principal.GetAuthenticationTimeEpoch().ToDateTimeFromEpoch();
         }
 
         /// <summary>
@@ -182,6 +183,19 @@ namespace IdentityServer4.Extensions
 
             if (claim == null) throw new InvalidOperationException("idp claim is missing");
             return claim.Value;
+        }
+
+        /// <summary>
+        /// Determines whether this instance is authenticated.
+        /// </summary>
+        /// <param name="principal">The principal.</param>
+        /// <returns>
+        ///   <c>true</c> if the specified principal is authenticated; otherwise, <c>false</c>.
+        /// </returns>
+        [DebuggerStepThrough]
+        public static bool IsAuthenticated(this IPrincipal principal)
+        {
+            return principal != null && principal.Identity != null && principal.Identity.IsAuthenticated;
         }
     }
 }

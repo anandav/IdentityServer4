@@ -37,8 +37,8 @@ the expiration date for enforcing a secret lifetime::
 
     var secret = new Secret(
         "secret".Sha256(), 
-        "primary secret", 
-        new DateTimeOffset(new DateTime(2016, 12,31)));  
+        "2016 secret", 
+        new DateTime(2016, 12, 31));  
 
 Authentication using a shared secret
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -66,5 +66,5 @@ You can manually create a basic authentication header using the following C# cod
     var client = new HttpClient();
     client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Basic", headerValue);
 
-The `IdentityModel <https://github.com/IdentityModel/IdentityModel>`_ library has helper classes called ``TokenClient`` and ``IntrospectionClient`` that encapsulate
+The `IdentityModel <https://github.com/IdentityModel/IdentityModel2>`_ library has helper classes called ``TokenClient`` and ``IntrospectionClient`` that encapsulate
 both authentication and protocol messages.

@@ -1,18 +1,20 @@
 ﻿// Copyright (c) Brock Allen & Dominick Baier. All rights reserved.
 // Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
 
+
 using FluentAssertions;
 using IdentityModel;
 using IdentityServer4.Configuration;
 using IdentityServer4.Models;
 using IdentityServer4.ResponseHandling;
+using IdentityServer4.UnitTests.Common;
 using IdentityServer4.Validation;
 using System.Collections.Generic;
+using System.Collections.Specialized;
 using System.Threading.Tasks;
-using UnitTests.Common;
 using Xunit;
 
-namespace IdentityServer4.Tests.ResponseHandling
+namespace IdentityServer4.UnitTests.ResponseHandling
 {
     public class AuthorizeInteractionResponseGeneratorTests_Login
     {
@@ -24,10 +26,8 @@ namespace IdentityServer4.Tests.ResponseHandling
         {
             _subject = new AuthorizeInteractionResponseGenerator(
                 TestLogger.Create<AuthorizeInteractionResponseGenerator>(),
-                _options,
                 _mockConsentService,
-                new TestProfileService(),
-                new TestLocalizationService());
+                new MockProfileService());
         }
 
         [Fact]
@@ -70,7 +70,7 @@ namespace IdentityServer4.Tests.ResponseHandling
                 {
                     IdentityProviderRestrictions = new List<string> 
                     {
-                        Constants.LocalIdentityProvider
+                        IdentityServerConstants.LocalIdentityProvider
                     }
                 }
             };
@@ -109,7 +109,7 @@ namespace IdentityServer4.Tests.ResponseHandling
                 ClientId = "foo",
                 Client = new Client(),
                  AuthenticationContextReferenceClasses = new List<string>{
-                    "idp:" + Constants.LocalIdentityProvider
+                    "idp:" + IdentityServerConstants.LocalIdentityProvider
                 },
                 Subject = IdentityServerPrincipal.Create("123", "dom")
             };
@@ -138,19 +138,16 @@ namespace IdentityServer4.Tests.ResponseHandling
         }
 
         [Fact]
-        public async Task Authenticated_User_with_local_Idp_must_SignIn_when_global_options_does_not_allow_local_logins()
+        public async Task locally_authenticated_user_but_client_does_not_allow_local_should_sign_in()
         {
-            _options.AuthenticationOptions.EnableLocalLogin = false;
-
             var request = new ValidatedAuthorizeRequest
             {
                 ClientId = "foo",
-                Subject = IdentityServerPrincipal.Create("123", "dom"),
-                Client = new Client
+                Client = new Client()
                 {
-                    ClientId = "foo",
-                    EnableLocalLogin = true
+                    EnableLocalLogin = false
                 },
+                Subject = IdentityServerPrincipal.Create("123", "dom")
             };
 
             var result = await _subject.ProcessLoginAsync(request);
@@ -159,24 +156,54 @@ namespace IdentityServer4.Tests.ResponseHandling
         }
 
         [Fact]
-        public async Task Authenticated_User_with_local_Idp_must_SignIn_when_client_options_does_not_allow_local_logins()
+        public async Task prompt_login_should_sign_in()
         {
-            _options.AuthenticationOptions.EnableLocalLogin = true;
-
             var request = new ValidatedAuthorizeRequest
             {
                 ClientId = "foo",
                 Subject = IdentityServerPrincipal.Create("123", "dom"),
-                Client = new Client
-                {
-                    ClientId = "foo",
-                    EnableLocalLogin = false
-                }
+                PromptMode = OidcConstants.PromptModes.Login,
+                Raw = new NameValueCollection()
             };
 
             var result = await _subject.ProcessLoginAsync(request);
 
             result.IsLogin.Should().BeTrue();
+        }
+
+        [Fact]
+        public async Task prompt_select_account_should_sign_in()
+        {
+            var request = new ValidatedAuthorizeRequest
+            {
+                ClientId = "foo",
+                Subject = IdentityServerPrincipal.Create("123", "dom"),
+                PromptMode = OidcConstants.PromptModes.SelectAccount,
+                Raw = new NameValueCollection()
+            };
+
+            var result = await _subject.ProcessLoginAsync(request);
+
+            result.IsLogin.Should().BeTrue();
+        }
+
+        [Fact]
+        public async Task prompt_for_signin_should_remove_prompt_from_raw_url()
+        {
+            var request = new ValidatedAuthorizeRequest
+            {
+                ClientId = "foo",
+                Subject = IdentityServerPrincipal.Create("123", "dom"),
+                PromptMode = OidcConstants.PromptModes.Login,
+                Raw = new NameValueCollection
+                {
+                    { OidcConstants.AuthorizeRequest.Prompt, OidcConstants.PromptModes.Login }
+                }
+            };
+
+            var result = await _subject.ProcessLoginAsync(request);
+
+            request.Raw.AllKeys.Should().NotContain(OidcConstants.AuthorizeRequest.Prompt);
         }
     }
 }

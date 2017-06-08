@@ -1,6 +1,7 @@
 ﻿// Copyright (c) Brock Allen & Dominick Baier. All rights reserved.
 // Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
 
+
 using System;
 using System.Collections.Generic;
 using System.Security.Claims;
@@ -10,32 +11,15 @@ namespace IdentityServer4.Models
     /// <summary>
     /// Models a refresh token.
     /// </summary>
-    public class RefreshToken : ITokenMetadata
+    public class RefreshToken
     {
-        /// <summary>
-        /// Initializes a new instance of the <see cref="RefreshToken"/> class.
-        /// </summary>
-        public RefreshToken()
-        {
-            Version = 4;
-        }
-
-        /// <summary>
-        /// Gets the client identifier.
-        /// </summary>
-        /// <value>
-        /// The client identifier.
-        /// </value>
-        public string ClientId { get { return AccessToken.ClientId; } }
-     
         /// <summary>
         /// Gets or sets the creation time.
         /// </summary>
         /// <value>
         /// The creation time.
         /// </value>
-        
-        public DateTimeOffset CreationTime { get; set; }
+        public DateTime CreationTime { get; set; }
 
         /// <summary>
         /// Gets or sets the life time.
@@ -43,7 +27,7 @@ namespace IdentityServer4.Models
         /// <value>
         /// The life time.
         /// </value>
-        public int LifeTime { get; set; }
+        public int Lifetime { get; set; }
 
         /// <summary>
         /// Gets or sets the access token.
@@ -59,7 +43,7 @@ namespace IdentityServer4.Models
         /// <value>
         /// The subject.
         /// </value>
-        public ClaimsPrincipal Subject { get; set; }
+        public ClaimsPrincipal Subject => IdentityServerPrincipal.FromSubjectId(SubjectId, AccessToken.Claims);
 
         /// <summary>
         /// Gets or sets the version number.
@@ -67,7 +51,15 @@ namespace IdentityServer4.Models
         /// <value>
         /// The version.
         /// </value>
-        public int Version { get; set; }
+        public int Version { get; set; } = 4;
+
+        /// <summary>
+        /// Gets the client identifier.
+        /// </summary>
+        /// <value>
+        /// The client identifier.
+        /// </value>
+        public string ClientId => AccessToken.ClientId;
 
         /// <summary>
         /// Gets the subject identifier.
@@ -75,10 +67,7 @@ namespace IdentityServer4.Models
         /// <value>
         /// The subject identifier.
         /// </value>
-        public string SubjectId
-        {
-            get { return AccessToken.SubjectId; }
-        }
+        public string SubjectId => AccessToken.SubjectId;
 
         /// <summary>
         /// Gets the scopes.
@@ -86,21 +75,6 @@ namespace IdentityServer4.Models
         /// <value>
         /// The scopes.
         /// </value>
-        public IEnumerable<string> Scopes
-        {
-            get { return AccessToken.Scopes; }
-        }
-
-        internal ClaimsPrincipal GetOriginalSubject()
-        {
-            if (Version <= 3)
-            {
-                return IdentityServerPrincipal.FromClaims(AccessToken.Claims, allowMissing: true);
-            }
-            else
-            {
-                return Subject;
-            }
-        }
+        public IEnumerable<string> Scopes => AccessToken.Scopes;
     }
 }

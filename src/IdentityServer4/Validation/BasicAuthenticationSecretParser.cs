@@ -1,6 +1,7 @@
 ﻿// Copyright (c) Brock Allen & Dominick Baier. All rights reserved.
 // Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
 
+
 using IdentityServer4.Configuration;
 using IdentityServer4.Extensions;
 using IdentityServer4.Models;
@@ -26,24 +27,24 @@ namespace IdentityServer4.Validation
         /// Creates the parser with a reference to identity server options
         /// </summary>
         /// <param name="options">IdentityServer options</param>
+        /// <param name="logger">The logger</param>
         public BasicAuthenticationSecretParser(IdentityServerOptions options, ILogger<BasicAuthenticationSecretParser> logger)
         {
             _options = options;
             _logger = logger;
         }
 
-        public string AuthenticationMethod
-        {
-            get
-            {
-                return OidcConstants.EndpointAuthenticationMethods.BasicAuthentication;
-            }
-        }
+        /// <summary>
+        /// Returns the authentication method name that this parser implements
+        /// </summary>
+        /// <value>
+        /// The authentication method.
+        /// </value>
+        public string AuthenticationMethod => OidcConstants.EndpointAuthenticationMethods.BasicAuthentication;
 
         /// <summary>
-        /// Tries to find a secret on the environment that can be used for authentication
+        /// Tries to find a secret that can be used for authentication
         /// </summary>
-        /// <param name="environment">The environment.</param>
         /// <returns>
         /// A parsed secret
         /// </returns>
@@ -106,7 +107,7 @@ namespace IdentityServer4.Validation
                 {
                     Id = clientId,
                     Credential = secret,
-                    Type = Constants.ParsedSecretTypes.SharedSecret
+                    Type = IdentityServerConstants.ParsedSecretTypes.SharedSecret
                 };
 
                 return Task.FromResult(parsedSecret);

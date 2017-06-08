@@ -1,10 +1,11 @@
 ﻿// Copyright (c) Brock Allen & Dominick Baier. All rights reserved.
 // Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
 
+
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using Microsoft.AspNet.Http;
 using IdentityServer4.Hosting;
+using Microsoft.AspNetCore.Http;
 
 namespace IdentityServer4.Endpoints.Results
 {
@@ -17,10 +18,10 @@ namespace IdentityServer4.Endpoints.Results
             Claims = claims;
         }
 
-        public async Task ExecuteAsync(IdentityServerContext context)
+        public async Task ExecuteAsync(HttpContext context)
         {
-            context.HttpContext.Response.SetNoCache();
-            await context.HttpContext.Response.WriteJsonAsync(Claims);
+            context.Response.SetNoCache();
+            await context.Response.WriteJsonAsync(Claims);
         }
     }
 }

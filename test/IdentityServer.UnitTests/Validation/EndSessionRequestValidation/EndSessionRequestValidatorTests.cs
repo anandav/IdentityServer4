@@ -1,45 +1,57 @@
-﻿using FluentAssertions;
+﻿// Copyright (c) Brock Allen & Dominick Baier. All rights reserved.
+// Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
+
+
+using FluentAssertions;
 using IdentityServer4.Configuration;
 using IdentityServer4.Extensions;
-using IdentityServer4.Hosting;
 using IdentityServer4.Models;
+using IdentityServer4.Stores;
+using IdentityServer4.UnitTests.Common;
 using IdentityServer4.Validation;
-using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
-using System.Linq;
 using System.Security.Claims;
 using System.Threading.Tasks;
-using UnitTests.Common;
 using Xunit;
 
-namespace IdentityServer.UnitTests.Validation.EndSessionRequestValidation
+namespace IdentityServer4.UnitTests.Validation.EndSessionRequestValidation
 {
     public class EndSessionRequestValidatorTests
     {
         EndSessionRequestValidator _subject;
-        IdentityServerContext _context;
+        IdentityServerOptions _options;
         StubTokenValidator _stubTokenValidator = new StubTokenValidator();
         StubRedirectUriValidator _stubRedirectUriValidator = new StubRedirectUriValidator();
+        MockHttpContextAccessor _context = new MockHttpContextAccessor();
+        MockSessionIdService _sessionId = new MockSessionIdService();
+        MockClientSessionService _clientList;
+        InMemoryClientStore _clientStore;
 
         ClaimsPrincipal _user;
 
         public EndSessionRequestValidatorTests()
         {
-            _user = IdentityServer4.IdentityServerPrincipal.Create("alice", "Alice");
+            _user = IdentityServerPrincipal.Create("alice", "Alice");
+            _clientList = new MockClientSessionService();
+            _clientStore = new InMemoryClientStore(new Client[0]);
 
-            _context = IdentityServerContextHelper.Create();
+            _options = TestIdentityServerOptions.Create();
             _subject = new EndSessionRequestValidator(
-                TestLogger.Create<EndSessionRequestValidator>(),
-                _context, 
+                _context,
+                _options,
                 _stubTokenValidator,
-                _stubRedirectUriValidator);
+                _stubRedirectUriValidator,
+                _sessionId,
+                _clientList,
+                _clientStore,
+                TestLogger.Create<EndSessionRequestValidator>());
         }
 
         [Fact]
         public async Task anonymous_user_when_options_require_authenticated_user_should_return_error()
         {
-            _context.Options.AuthenticationOptions.RequireAuthenticatedUserForSignOutMessage = true;
+            _options.Authentication.RequireAuthenticatedUserForSignOutMessage = true;
 
             var parameters = new NameValueCollection();
             var result = await _subject.ValidateAsync(parameters, null);

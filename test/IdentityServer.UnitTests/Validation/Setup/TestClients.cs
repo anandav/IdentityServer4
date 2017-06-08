@@ -1,10 +1,11 @@
 ﻿// Copyright (c) Brock Allen & Dominick Baier. All rights reserved.
 // Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
 
+
 using IdentityServer4.Models;
 using System.Collections.Generic;
 
-namespace IdentityServer4.Tests.Validation
+namespace IdentityServer4.UnitTests.Validation
 {
     class TestClients
     {
@@ -23,13 +24,13 @@ namespace IdentityServer4.Tests.Validation
                     },
 
                     AllowedGrantTypes = GrantTypes.Code,
-                    AllowAccessToAllScopes = true,
+                    AllowedScopes = { "openid", "profile", "resource", "resource2" },
 
                     RequireConsent = false,
 
                     RedirectUris = new List<string>
                     {
-                        "https://server/cb",
+                        "https://server/cb"
                     },
 
                     AuthorizationCodeLifetime = 60
@@ -46,13 +47,37 @@ namespace IdentityServer4.Tests.Validation
 
                     AllowedGrantTypes = GrantTypes.Code,
                     RequirePkce = true,
-                    AllowAccessToAllScopes = true,
+                    AllowedScopes = { "openid", "profile", "resource", "resource2" },
 
                     RequireConsent = false,
 
                     RedirectUris = new List<string>
                     {
-                        "https://server/cb",
+                        "https://server/cb"
+                    },
+
+                    AuthorizationCodeLifetime = 60
+                },
+                new Client
+                {
+                    ClientName = "Code Client with PKCE and plain allowed",
+                    Enabled = true,
+                    ClientId = "codeclient.pkce.plain",
+                    ClientSecrets = new List<Secret>
+                    {
+                        new Secret("secret".Sha256())
+                    },
+
+                    AllowedGrantTypes = GrantTypes.Code,
+                    RequirePkce = true,
+                    AllowPlainTextPkce = true,
+                    AllowedScopes = { "openid", "profile", "resource", "resource2" },
+
+                    RequireConsent = false,
+
+                    RedirectUris = new List<string>
+                    {
+                        "https://server/cb"
                     },
 
                     AuthorizationCodeLifetime = 60
@@ -68,14 +93,14 @@ namespace IdentityServer4.Tests.Validation
                         },
 
                         AllowedGrantTypes = GrantTypes.Hybrid,
-                        AllowAccessToAllScopes = true,
+                        AllowedScopes = { "openid", "profile", "resource", "resource2" },
                         AllowAccessTokensViaBrowser = true,
 
                         RequireConsent = false,
 
                         RedirectUris = new List<string>
                         {
-                            "https://server/cb",
+                            "https://server/cb"
                         },
 
                         AuthorizationCodeLifetime = 60
@@ -92,14 +117,14 @@ namespace IdentityServer4.Tests.Validation
 
                         AllowedGrantTypes = GrantTypes.Hybrid,
                         RequirePkce = true,
-                        AllowAccessToAllScopes = true,
+                        AllowedScopes = { "openid", "profile", "resource", "resource2" },
                         AllowAccessTokensViaBrowser = true,
 
                         RequireConsent = false,
 
                         RedirectUris = new List<string>
                         {
-                            "https://server/cb",
+                            "https://server/cb"
                         },
 
                         AuthorizationCodeLifetime = 60
@@ -115,14 +140,14 @@ namespace IdentityServer4.Tests.Validation
                         },
 
                         AllowedGrantTypes = GrantTypes.Hybrid,
-                        AllowAccessToAllScopes = true,
+                        AllowedScopes = { "openid", "profile", "resource", "resource2" },
                         AllowAccessTokensViaBrowser = false,
 
                         RequireConsent = false,
 
                         RedirectUris = new List<string>
                         {
-                            "https://server/cb",
+                            "https://server/cb"
                         },
 
                         AuthorizationCodeLifetime = 60
@@ -133,7 +158,7 @@ namespace IdentityServer4.Tests.Validation
                         ClientId = "implicitclient",
 
                         AllowedGrantTypes = GrantTypes.Implicit,
-                        AllowAccessToAllScopes = true,
+                        AllowedScopes = { "openid", "profile", "resource", "resource2" },
                         AllowAccessTokensViaBrowser = true,
 
                         RequireConsent = false,
@@ -141,7 +166,7 @@ namespace IdentityServer4.Tests.Validation
                         RedirectUris = new List<string>
                         {
                             "oob://implicit/cb"
-                        },
+                        }
                     },
                     new Client
                     {
@@ -149,7 +174,7 @@ namespace IdentityServer4.Tests.Validation
                         ClientId = "implicitclient_no_aavb",
 
                         AllowedGrantTypes = GrantTypes.Implicit,
-                        AllowAccessToAllScopes = true,
+                        AllowedScopes = { "openid", "profile", "resource", "resource2" },
                         AllowAccessTokensViaBrowser = false,
 
                         RequireConsent = false,
@@ -157,7 +182,7 @@ namespace IdentityServer4.Tests.Validation
                         RedirectUris = new List<string>
                         {
                             "oob://implicit/cb"
-                        },
+                        }
                     },
                     new Client
                     {
@@ -170,13 +195,13 @@ namespace IdentityServer4.Tests.Validation
                         },
 
                         AllowedGrantTypes = GrantTypes.ImplicitAndClientCredentials,
-                        AllowAccessToAllScopes = true,
+                        AllowedScopes = { "openid", "profile", "resource", "resource2" },
                         RequireConsent = false,
 
                         RedirectUris = new List<string>
                         {
                             "oob://implicit/cb"
-                        },
+                        }
                     },
                     new Client
                     {
@@ -198,8 +223,8 @@ namespace IdentityServer4.Tests.Validation
 
                         RedirectUris = new List<string>
                         {
-                            "https://server/cb",
-                        },
+                            "https://server/cb"
+                        }
                     },
                     new Client
                     {
@@ -212,7 +237,7 @@ namespace IdentityServer4.Tests.Validation
                         },
 
                         AllowedGrantTypes = GrantTypes.ClientCredentials,
-                        AllowAccessToAllScopes = true,
+                        AllowedScopes = { "openid", "profile", "resource", "resource2" },
 
                         AccessTokenType = AccessTokenType.Jwt
                     },
@@ -231,7 +256,7 @@ namespace IdentityServer4.Tests.Validation
                         AllowedScopes = new List<string>
                         {
                             "resource"
-                        },
+                        }
                     },
                     new Client
                     {
@@ -244,17 +269,18 @@ namespace IdentityServer4.Tests.Validation
                         },
 
                         AllowedGrantTypes = GrantTypes.ResourceOwnerPassword,
-                        AllowAccessToAllScopes = true,
+                        AllowedScopes = { "openid", "profile", "resource", "resource2" },
+                        AllowOfflineAccess = true
                     },
                     new Client
                     {
                         ClientName = "Resource Owner Client - Public",
                         Enabled = true,
                         ClientId = "roclient.public",
-                        PublicClient = true,
+                        RequireClientSecret = false,
 
                         AllowedGrantTypes = GrantTypes.ResourceOwnerPassword,
-                        AllowAccessToAllScopes = true,
+                        AllowedScopes = { "openid", "profile", "resource", "resource2" }
                     },
                     new Client
                     {
@@ -267,7 +293,7 @@ namespace IdentityServer4.Tests.Validation
                         },
 
                         AllowedGrantTypes = GrantTypes.ResourceOwnerPassword,
-                        AllowAccessToAllScopes = true,
+                        AllowedScopes = { "openid", "profile", "resource", "resource2" },
 
                         RefreshTokenExpiration = TokenExpiration.Absolute,
                         RefreshTokenUsage = TokenUsage.OneTimeOnly,
@@ -284,7 +310,7 @@ namespace IdentityServer4.Tests.Validation
                         },
 
                         AllowedGrantTypes = GrantTypes.ResourceOwnerPassword,
-                        AllowAccessToAllScopes = true,
+                        AllowedScopes = { "openid", "profile", "resource", "resource2" },
 
                         RefreshTokenExpiration = TokenExpiration.Absolute,
                         RefreshTokenUsage = TokenUsage.ReUse,
@@ -301,7 +327,7 @@ namespace IdentityServer4.Tests.Validation
                         },
 
                         AllowedGrantTypes = GrantTypes.ResourceOwnerPassword,
-                        AllowAccessToAllScopes = true,
+                        AllowedScopes = { "openid", "profile", "resource", "resource2" },
 
                         RefreshTokenExpiration = TokenExpiration.Sliding,
                         RefreshTokenUsage = TokenUsage.OneTimeOnly,
@@ -319,7 +345,7 @@ namespace IdentityServer4.Tests.Validation
                         },
 
                         AllowedGrantTypes = GrantTypes.ResourceOwnerPassword,
-                        AllowAccessToAllScopes = true,
+                        AllowedScopes = { "openid", "profile", "resource", "resource2" },
 
                         RefreshTokenExpiration = TokenExpiration.Sliding,
                         RefreshTokenUsage = TokenUsage.ReUse,
@@ -341,7 +367,7 @@ namespace IdentityServer4.Tests.Validation
                         AllowedScopes = new List<string>
                         {
                             "resource"
-                        },
+                        }
                     },
                     new Client
                     {
@@ -355,11 +381,11 @@ namespace IdentityServer4.Tests.Validation
 
                         AllowedGrantTypes = GrantTypes.ResourceOwnerPassword,
 
+                        AllowOfflineAccess = true,
                         AllowedScopes = new List<string>
                         {
-                            "resource",
-                            "offline_access"
-                        },
+                            "resource"
+                        }
                     },
 
                     new Client
@@ -372,8 +398,8 @@ namespace IdentityServer4.Tests.Validation
                             new Secret("secret".Sha256())
                         },
 
-                        AllowedGrantTypes = GrantTypes.List("custom_grant"),
-                        AllowAccessToAllScopes = true,
+                        AllowedGrantTypes = { "custom_grant" },
+                        AllowedScopes = { "openid", "profile", "resource", "resource2" }
                     },
 
                     new Client
@@ -387,7 +413,7 @@ namespace IdentityServer4.Tests.Validation
                         },
 
                         AllowedGrantTypes = GrantTypes.ClientCredentials,
-                        AllowAccessToAllScopes = true,
+                        AllowedScopes = { "openid", "profile", "resource", "resource2" }
                     },
                     new Client
                     {
@@ -401,9 +427,43 @@ namespace IdentityServer4.Tests.Validation
                         },
 
                         AllowedGrantTypes = GrantTypes.Implicit,
-                        AllowAccessToAllScopes = true,
+                        AllowedScopes = { "openid", "profile", "resource", "resource2" },
 
                         AccessTokenType = AccessTokenType.Reference
+                    },
+                    new Client
+                    {
+                        ClientId = "wsfed",
+                        ClientName = "WS-Fed Client",
+                        ProtocolType = IdentityServerConstants.ProtocolTypes.WsFederation,
+                        AllowedGrantTypes = GrantTypes.Implicit,
+                        Enabled = true,
+                        AllowedScopes = { "openid", "profile", "resource", "resource2" },
+                        RedirectUris = { "http://wsfed/callback"  }
+                    },
+                    new Client
+                    {
+                        ClientId = "client.cred.wsfed",
+                        ClientName = "WS-Fed Client",
+                        ProtocolType = IdentityServerConstants.ProtocolTypes.WsFederation,
+                        AllowedGrantTypes = GrantTypes.ClientCredentials,
+                        ClientSecrets = { new Secret("secret".Sha256()) },
+
+                        Enabled = true,
+                        AllowedScopes = { "openid", "profile", "resource", "resource2" }
+                    },
+                    new Client
+                    {
+                        ClientId = "client.implicit",
+                        ClientName = "Implicit Client",
+                        AllowedGrantTypes = GrantTypes.Implicit,
+                        AllowedScopes = { "openid", "profile", "resource", "resource2" }
+                    },
+                    new Client
+                    {
+                        ClientId = "implicit_and_client_creds",
+                        AllowedGrantTypes = GrantTypes.ImplicitAndClientCredentials,
+                        AllowedScopes = {"api1"}
                     }
             };
         }

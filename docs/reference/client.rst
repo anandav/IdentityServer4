@@ -1,3 +1,4 @@
+.. _refClient:
 Client
 ======
 
@@ -14,18 +15,21 @@ Basics
     Unique ID of the client
 ``ClientSecrets``
     List of client secrets - credentials to access the token endpoint.
-``PublicClient``
-    Specifies whether this client needs a secret to request tokens from the token endpoint.
+``RequireClientSecret``
+    Specifies whether this client needs a secret to request tokens from the token endpoint (defaults to ``true``)
 ``AllowedGrantTypes``
     Specifies the grant types the client is allowed to use. Use the ``GrantTypes`` class for common combinations.
 ``RequirePkce``
     Specifies whether clients using an authorization code based grant type must send a proof key
+``AllowPlainTextPkce``
+    Specifies whether clients using PKCE can use a plain text code challenge (not recommended - and default to ``false``)
 ``RedirectUris``
     Specifies the allowed URIs to return tokens or authorization codes to
 ``AllowedScopes``
-    By default a client has no access to any scopes - either specify the scopes explicitly here (recommended) - 
-    or set ``AllowAccessToAllScopes`` to true.
-``AllowAccessTokenViaBrowser``
+    By default a client has no access to any resources - specify the allowed resources by adding the corresponding scopes names
+``AllowOfflineAccess``
+    Specifies whether this client can request refresh tokens (be requesting the ``offline_access`` scope)
+``AllowAccessTokensViaBrowser``
     Specifies whether this client is allowed to receive access tokens via the browser. 
     This is useful to harden flows that allow multiple response types 
     (e.g. by disallowing a hybrid flow client that is supposed to use `code id_token` to add the `token` response type 
@@ -35,13 +39,11 @@ Authentication/Logout
 ^^^^^^^^^^^^^^^^^^^^^
 
 ``PostLogoutRedirectUris``
-    Specifies allowed URIs to redirect to after logout
+    Specifies allowed URIs to redirect to after logout. See the `OIDC Connect Session Management spec <https://openid.net/specs/openid-connect-session-1_0.html>`_ for more details.
 ``LogoutUri``
-    Specifies logout URI at client for HTTP based logout
+    Specifies logout URI at client for HTTP based logout. See the `OIDC Front-Channel spec <https://openid.net/specs/openid-connect-frontchannel-1_0.html>`_ for more details.
 ``LogoutSessionRequired``
     Specifies if the user's session id should be sent to the LogoutUri. Defaults to true.
-``RequireSignOutPrompt``
-    Specifies if the client will always show a confirmation page for sign-out. Defaults to false.
 ``EnableLocalLogin``
     Specifies if this client can use local accounts, or external IdPs only. Defaults to `true`.
 ``IdentityProviderRestrictions``
@@ -72,8 +74,6 @@ Token
     Gets or sets a value indicating whether the access token (and its claims) should be updated on a refresh token request.
 ``AccessTokenType``
     Specifies whether the access token is a reference token or a self contained JWT token (defaults to `Jwt`).
-
-    **note** production usage of reference tokens requires and implementation of ``ITokenHandleStore``.
 ``IncludeJwtId``
     Specifies whether JWT access tokens should have an embedded unique ID (via the `jti` claim).
 ``AllowedCorsOrigins``
@@ -92,8 +92,6 @@ Consent Screen
     Specifies whether a consent screen is required. Defaults to `true`.
 ``AllowRememberConsent``
     Specifies whether user can choose to store consent decisions. Defaults to `true`.
-    
-    **note** production usage of that features requires an implementation of ``IConsentStore``.
 ``ClientName``
     Client display name (used for logging and consent screen)
 ``ClientUri``

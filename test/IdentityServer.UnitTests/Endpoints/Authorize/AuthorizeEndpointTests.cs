@@ -1,25 +1,22 @@
 ﻿// Copyright (c) Brock Allen & Dominick Baier. All rights reserved.
 // Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
 
+
 using FluentAssertions;
 using IdentityServer4.Endpoints;
 using System.Threading.Tasks;
 using Xunit;
-using UnitTests.Common;
-using IdentityServer4.Hosting;
 using System.Collections.Specialized;
 using System.Security.Claims;
 using IdentityServer4.Validation;
 using Microsoft.Extensions.Logging;
-using IdentityServer4.Events;
 using IdentityServer4.Models;
-using IdentityServer4;
 using IdentityServer4.Endpoints.Results;
-using System.Collections.Generic;
 using Microsoft.AspNetCore.Http;
 using IdentityServer4.Extensions;
+using IdentityServer4.UnitTests.Common;
 
-namespace UnitTests.Endpoints.Authorize
+namespace IdentityServer4.UnitTests.Endpoints.Authorize
 {
     public class AuthorizeEndpointTests
     {
@@ -30,15 +27,15 @@ namespace UnitTests.Endpoints.Authorize
         NameValueCollection _params = new NameValueCollection();
         ClaimsPrincipal _user = IdentityServerPrincipal.Create("bob", "Bob Loblaw");
 
-        IdentityServerContext _context;
+        HttpContext _context;
         ValidatedAuthorizeRequest _validatedAuthorizeRequest;
 
         TestEventService _fakeEventService = new TestEventService();
         ILogger<AuthorizeEndpoint> _fakeLogger = TestLogger.Create<AuthorizeEndpoint>();
         StubAuthorizeRequestValidator _stubAuthorizeRequestValidator = new StubAuthorizeRequestValidator();
         StubAuthorizeInteractionResponseGenerator _stubInteractionGenerator = new StubAuthorizeInteractionResponseGenerator();
-        StubResultFactory _stubResultFactory = new StubResultFactory();
         MockMessageStore<ConsentResponse> _mockUserConsentResponseMessageStore = new MockMessageStore<ConsentResponse>();
+        StubAuthorizeResponseGenerator _stubAuthorizeResponseGenerator = new StubAuthorizeResponseGenerator();
 
         public AuthorizeEndpointTests()
         {
@@ -47,7 +44,7 @@ namespace UnitTests.Endpoints.Authorize
 
         public void Init()
         {
-            _context = IdentityServerContextHelper.Create();
+            _context = new MockHttpContextAccessor().HttpContext;
 
             _validatedAuthorizeRequest = new ValidatedAuthorizeRequest()
             {
@@ -63,25 +60,24 @@ namespace UnitTests.Endpoints.Authorize
                 Raw = _params,
                 Subject = _user
             };
+            _stubAuthorizeResponseGenerator.Response.Request = _validatedAuthorizeRequest;
 
-            _stubAuthorizeRequestValidator.Result.IsError = false;
-            _stubAuthorizeRequestValidator.Result.ValidatedRequest = _validatedAuthorizeRequest;
+            _stubAuthorizeRequestValidator.Result = new AuthorizeRequestValidationResult(_validatedAuthorizeRequest);
 
             _subject = new AuthorizeEndpoint(
                 _fakeEventService,
                 _fakeLogger,
-                _context,
                 _stubAuthorizeRequestValidator,
                 _stubInteractionGenerator,
-                _stubResultFactory,
-                _mockUserConsentResponseMessageStore);
+                _mockUserConsentResponseMessageStore,
+                _stubAuthorizeResponseGenerator);
         }
 
         [Fact]
         [Trait("Category", Category)]
         public async Task ProcessAsync_post_to_entry_point_should_return_405()
         {
-            _context.HttpContext.Request.Method = "POST";
+            _context.Request.Method = "POST";
 
             var result = await _subject.ProcessAsync(_context);
 
@@ -94,8 +90,8 @@ namespace UnitTests.Endpoints.Authorize
         [Trait("Category", Category)]
         public async Task ProcessAsync_invalid_path_should_return_404()
         {
-            _context.HttpContext.Request.Method = "GET";
-            _context.HttpContext.Request.Path = new PathString("/foo");
+            _context.Request.Method = "GET";
+            _context.Request.Path = new PathString("/foo");
 
             var result = await _subject.ProcessAsync(_context);
 
@@ -108,26 +104,26 @@ namespace UnitTests.Endpoints.Authorize
         [Trait("Category", Category)]
         public async Task ProcessAsync_authorize_path_should_return_authorization_result()
         {
-            _context.HttpContext.Request.Method = "GET";
-            _context.HttpContext.Request.Path = new PathString("/connect/authorize");
-            _context.HttpContext.SetUser(_user);
+            _context.Request.Method = "GET";
+            _context.Request.Path = new PathString("/connect/authorize");
+            _context.SetUser(_user);
 
             var result = await _subject.ProcessAsync(_context);
 
-            (result is AuthorizeRedirectResult || result is AuthorizeFormPostResult).Should().BeTrue();
+            result.Should().BeOfType<AuthorizeResult>();
         }
 
         [Fact]
         [Trait("Category", Category)]
         public async Task ProcessAsync_authorize_after_login_path_should_return_authorization_result()
         {
-            _context.HttpContext.Request.Method = "GET";
-            _context.HttpContext.Request.Path = new PathString("/connect/authorize/login");
-            _context.HttpContext.SetUser(_user);
+            _context.Request.Method = "GET";
+            _context.Request.Path = new PathString("/connect/authorize/login");
+            _context.SetUser(_user);
 
             var result = await _subject.ProcessAsync(_context);
 
-            (result is AuthorizeRedirectResult || result is AuthorizeFormPostResult).Should().BeTrue();
+            result.Should().BeOfType<AuthorizeResult>();
         }
 
         [Fact]
@@ -143,15 +139,15 @@ namespace UnitTests.Endpoints.Authorize
             var request = new ConsentRequest(parameters, _user.GetSubjectId());
             _mockUserConsentResponseMessageStore.Messages.Add(request.Id, new Message<ConsentResponse>(new ConsentResponse()));
 
-            _context.HttpContext.SetUser(_user);
+            _context.SetUser(_user);
 
-            _context.HttpContext.Request.Method = "GET";
-            _context.HttpContext.Request.Path = new PathString("/connect/authorize/consent");
-            _context.HttpContext.Request.QueryString = new QueryString("?" + parameters.ToQueryString());
+            _context.Request.Method = "GET";
+            _context.Request.Path = new PathString("/connect/authorize/consent");
+            _context.Request.QueryString = new QueryString("?" + parameters.ToQueryString());
 
             var result = await _subject.ProcessAsync(_context);
 
-            (result is AuthorizeRedirectResult || result is AuthorizeFormPostResult).Should().BeTrue();
+            result.Should().BeOfType<AuthorizeResult>();
         }
 
 
@@ -160,55 +156,24 @@ namespace UnitTests.Endpoints.Authorize
         public async Task authorize_request_validation_produces_error_should_display_error_page()
         {
             _stubAuthorizeRequestValidator.Result.IsError = true;
+            _stubAuthorizeRequestValidator.Result.Error = "some_error";
 
             var result = await _subject.ProcessAuthorizeRequestAsync(_params, _user, null);
 
-            result.Should().BeOfType<ErrorPageResult>();
-        }
-
-        [Fact]
-        [Trait("Category", Category)]
-        public async Task authorize_request_validation_produces_error_should_raise_failed_endpoint_event()
-        {
-            _stubAuthorizeRequestValidator.Result.IsError = true;
-            _stubAuthorizeRequestValidator.Result.ErrorType = ErrorTypes.Client;
-            _stubAuthorizeRequestValidator.Result.Error = "some error";
-
-            var result = await _subject.ProcessAuthorizeRequestAsync(_params, _user, null);
-
-            var evt = _fakeEventService.AssertEventWasRaised<Event<EndpointDetail>>();
-            evt.EventType.Should().Be(EventTypes.Failure);
-            evt.Id.Should().Be(EventConstants.Ids.EndpointFailure);
-            evt.Message.Should().Be("some error");
-            evt.Details.EndpointName.Should().Be(EventConstants.EndpointNames.Authorize);
+            result.Should().BeOfType<AuthorizeResult>();
+            ((AuthorizeResult)result).Response.IsError.Should().BeTrue();
         }
 
         [Fact]
         [Trait("Category", Category)]
         public async Task interaction_produces_error_should_show_error_page()
         {
-            _stubInteractionGenerator.Response.Error = new AuthorizeError { };
+            _stubInteractionGenerator.Response.Error = "error";
 
             var result = await _subject.ProcessAuthorizeRequestAsync(_params, _user, null);
 
-            result.Should().BeOfType<ErrorPageResult>();
-        }
-
-        [Fact]
-        [Trait("Category", Category)]
-        public async Task interaction_produces_error_should_raise_failed_endpoint_event()
-        {
-            _stubInteractionGenerator.Response.Error = new AuthorizeError {
-                Error = "some_error",
-            };
-
-            var result = await _subject.ProcessAuthorizeRequestAsync(_params, _user, null);
-
-            var evt = _fakeEventService.AssertEventWasRaised<Event<EndpointDetail>>();
-            evt.EventType.Should().Be(EventTypes.Failure);
-            evt.Id.Should().Be(EventConstants.Ids.EndpointFailure);
-            evt.Message.Should().Be("some_error");
-            evt.Details.EndpointName.Should().Be(EventConstants.EndpointNames.Authorize);
+            result.Should().BeOfType<AuthorizeResult>();
+            ((AuthorizeResult)result).Response.IsError.Should().BeTrue();
         }
 
         [Fact]
@@ -239,7 +204,7 @@ namespace UnitTests.Endpoints.Authorize
         {
             var result = await _subject.ProcessAuthorizeRequestAsync(_params, _user, null);
 
-            (result is AuthorizeRedirectResult || result is AuthorizeFormPostResult).Should().BeTrue();
+            result.Should().BeOfType<AuthorizeResult>();
         }
 
         // after login
@@ -247,11 +212,12 @@ namespace UnitTests.Endpoints.Authorize
         [Trait("Category", Category)]
         public async Task ProcessAuthorizeAfterLoginAsync_no_user_should_return_error_page()
         {
-            _context.HttpContext.SetUser(null);
+            _context.SetUser(null);
 
             var result = await _subject.ProcessAuthorizeAfterLoginAsync(_context);
 
-            result.Should().BeAssignableTo<ErrorPageResult>();
+            result.Should().BeOfType<AuthorizeResult>();
+            ((AuthorizeResult)result).Response.IsError.Should().BeTrue();
         }
 
 
@@ -260,11 +226,12 @@ namespace UnitTests.Endpoints.Authorize
         [Trait("Category", Category)]
         public async Task ProcessAuthorizeWithConsentAsync_no_user_should_return_error_page()
         {
-            _context.HttpContext.SetUser(null);
+            _context.SetUser(null);
 
             var result = await _subject.ProcessAuthorizeAfterConsentAsync(_context);
 
-            result.Should().BeAssignableTo<ErrorPageResult>();
+            result.Should().BeOfType<AuthorizeResult>();
+            ((AuthorizeResult)result).Response.IsError.Should().BeTrue();
         }
 
         [Fact]
@@ -280,15 +247,16 @@ namespace UnitTests.Endpoints.Authorize
             var request = new ConsentRequest(parameters, _user.GetSubjectId());
             _mockUserConsentResponseMessageStore.Messages.Add(request.Id, null);
 
-            _context.HttpContext.SetUser(_user);
+            _context.SetUser(_user);
 
-            _context.HttpContext.Request.Method = "GET";
-            _context.HttpContext.Request.Path = new PathString("/connect/authorize/consent");
-            _context.HttpContext.Request.QueryString = new QueryString("?" + parameters.ToQueryString());
+            _context.Request.Method = "GET";
+            _context.Request.Path = new PathString("/connect/authorize/consent");
+            _context.Request.QueryString = new QueryString("?" + parameters.ToQueryString());
 
             var result = await _subject.ProcessAuthorizeAfterConsentAsync(_context);
 
-            result.Should().BeAssignableTo<ErrorPageResult>();
+            result.Should().BeOfType<AuthorizeResult>();
+            ((AuthorizeResult)result).Response.IsError.Should().BeTrue();
         }
 
         [Fact]
@@ -304,15 +272,16 @@ namespace UnitTests.Endpoints.Authorize
             var request = new ConsentRequest(parameters, _user.GetSubjectId());
             _mockUserConsentResponseMessageStore.Messages.Add(request.Id, new Message<ConsentResponse>(null));
 
-            _context.HttpContext.SetUser(_user);
+            _context.SetUser(_user);
 
-            _context.HttpContext.Request.Method = "GET";
-            _context.HttpContext.Request.Path = new PathString("/connect/authorize/consent");
-            _context.HttpContext.Request.QueryString = new QueryString("?" + parameters.ToQueryString());
+            _context.Request.Method = "GET";
+            _context.Request.Path = new PathString("/connect/authorize/consent");
+            _context.Request.QueryString = new QueryString("?" + parameters.ToQueryString());
 
             var result = await _subject.ProcessAuthorizeAfterConsentAsync(_context);
 
-            result.Should().BeAssignableTo<ErrorPageResult>();
+            result.Should().BeOfType<AuthorizeResult>();
+            ((AuthorizeResult)result).Response.IsError.Should().BeTrue();
         }
 
         [Fact]
@@ -328,15 +297,15 @@ namespace UnitTests.Endpoints.Authorize
             var request = new ConsentRequest(parameters, _user.GetSubjectId());
             _mockUserConsentResponseMessageStore.Messages.Add(request.Id, new Message<ConsentResponse>(new ConsentResponse() {ScopesConsented = new string[] { "api1", "api2" } }));
 
-            _context.HttpContext.SetUser(_user);
+            _context.SetUser(_user);
 
-            _context.HttpContext.Request.Method = "GET";
-            _context.HttpContext.Request.Path = new PathString("/connect/authorize/consent");
-            _context.HttpContext.Request.QueryString = new QueryString("?" + parameters.ToQueryString());
+            _context.Request.Method = "GET";
+            _context.Request.Path = new PathString("/connect/authorize/consent");
+            _context.Request.QueryString = new QueryString("?" + parameters.ToQueryString());
 
             var result = await _subject.ProcessAuthorizeAfterConsentAsync(_context);
 
-            (result is AuthorizeRedirectResult || result is AuthorizeFormPostResult).Should().BeTrue();
+            result.Should().BeOfType<AuthorizeResult>();
         }
 
         [Fact]
@@ -352,15 +321,27 @@ namespace UnitTests.Endpoints.Authorize
             var request = new ConsentRequest(parameters, _user.GetSubjectId());
             _mockUserConsentResponseMessageStore.Messages.Add(request.Id, new Message<ConsentResponse>(new ConsentResponse() { ScopesConsented = new string[] { "api1", "api2" } }));
 
-            _context.HttpContext.SetUser(_user);
+            _context.SetUser(_user);
 
-            _context.HttpContext.Request.Method = "GET";
-            _context.HttpContext.Request.Path = new PathString("/connect/authorize/consent");
-            _context.HttpContext.Request.QueryString = new QueryString("?" + parameters.ToQueryString());
+            _context.Request.Method = "GET";
+            _context.Request.Path = new PathString("/connect/authorize/consent");
+            _context.Request.QueryString = new QueryString("?" + parameters.ToQueryString());
 
             var result = await _subject.ProcessAuthorizeAfterConsentAsync(_context);
 
             _mockUserConsentResponseMessageStore.Messages.Count.Should().Be(0);
+        }
+
+        [Fact]
+        [Trait("Category", Category)]
+        public async Task ProcessAuthorizeRequestAsync_custom_interaction_redirect_result_should_issue_redirect()
+        {
+            _context.SetUser(_user);
+            _stubInteractionGenerator.Response.RedirectUrl = "http://foo.com";
+
+            var result = await _subject.ProcessAuthorizeRequestAsync(_params, _user, null);
+
+            result.Should().BeOfType<CustomRedirectResult>();
         }
     }
 }

@@ -1,19 +1,21 @@
 ﻿// Copyright (c) Brock Allen & Dominick Baier. All rights reserved.
 // Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
 
+
 using FluentAssertions;
 using IdentityModel;
 using System.Collections.Specialized;
 using System.Threading.Tasks;
 using Xunit;
 
-namespace IdentityServer4.Tests.Validation.AuthorizeRequest
+namespace IdentityServer4.UnitTests.Validation.AuthorizeRequest
 {
-
     public class Authorize_ProtocolValidation_Valid
     {
+        const string Category = "AuthorizeRequest Protocol Validation - Valid";
+
         [Fact]
-        [Trait("Category", "AuthorizeRequest Protocol Validation - Valid")]
+        [Trait("Category", Category)]
         public async Task Valid_OpenId_Code_Request()
         {
             var parameters = new NameValueCollection();
@@ -29,7 +31,7 @@ namespace IdentityServer4.Tests.Validation.AuthorizeRequest
         }
 
         [Fact]
-        [Trait("Category", "AuthorizeRequest Protocol Validation - Valid")]
+        [Trait("Category", Category)]
         public async Task Valid_Resource_Code_Request()
         {
             var parameters = new NameValueCollection();
@@ -45,7 +47,7 @@ namespace IdentityServer4.Tests.Validation.AuthorizeRequest
         }
 
         [Fact]
-        [Trait("Category", "AuthorizeRequest Protocol Validation - Valid")]
+        [Trait("Category", Category)]
         public async Task Valid_Mixed_Code_Request()
         {
             var parameters = new NameValueCollection();
@@ -61,7 +63,7 @@ namespace IdentityServer4.Tests.Validation.AuthorizeRequest
         }
 
         [Fact]
-        [Trait("Category", "AuthorizeRequest Protocol Validation - Valid")]
+        [Trait("Category", Category)]
         public async Task Valid_Resource_Token_Request()
         {
             var parameters = new NameValueCollection();
@@ -77,7 +79,7 @@ namespace IdentityServer4.Tests.Validation.AuthorizeRequest
         }
 
         [Fact]
-        [Trait("Category", "AuthorizeRequest Protocol Validation - Valid")]
+        [Trait("Category", Category)]
         public async Task Valid_OpenId_IdToken_Request()
         {
             var parameters = new NameValueCollection();
@@ -94,7 +96,7 @@ namespace IdentityServer4.Tests.Validation.AuthorizeRequest
         }
 
         [Fact]
-        [Trait("Category", "AuthorizeRequest Protocol Validation - Valid")]
+        [Trait("Category", Category)]
         public async Task Valid_Mixed_IdTokenToken_Request()
         {
             var parameters = new NameValueCollection();
@@ -111,12 +113,12 @@ namespace IdentityServer4.Tests.Validation.AuthorizeRequest
         }
 
         [Fact]
-        [Trait("Category", "AuthorizeRequest Protocol Validation - Valid")]
+        [Trait("Category", Category)]
         public async Task Valid_OpenId_IdToken_With_FormPost_ResponseMode_Request()
         {
             var parameters = new NameValueCollection();
             parameters.Add(OidcConstants.AuthorizeRequest.ClientId, "implicitclient");
-            parameters.Add(OidcConstants.AuthorizeRequest.Scope, Constants.StandardScopes.OpenId);
+            parameters.Add(OidcConstants.AuthorizeRequest.Scope, IdentityServerConstants.StandardScopes.OpenId);
             parameters.Add(OidcConstants.AuthorizeRequest.RedirectUri, "oob://implicit/cb");
             parameters.Add(OidcConstants.AuthorizeRequest.ResponseType, OidcConstants.ResponseTypes.IdToken);
             parameters.Add(OidcConstants.AuthorizeRequest.ResponseMode, OidcConstants.ResponseModes.FormPost);
@@ -129,7 +131,7 @@ namespace IdentityServer4.Tests.Validation.AuthorizeRequest
         }
 
         [Fact]
-        [Trait("Category", "AuthorizeRequest Protocol Validation - Valid")]
+        [Trait("Category", Category)]
         public async Task Valid_OpenId_IdToken_Token_With_FormPost_ResponseMode_Request()
         {
             var parameters = new NameValueCollection();

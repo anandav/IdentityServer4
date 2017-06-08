@@ -1,8 +1,8 @@
 ﻿// Copyright (c) Brock Allen & Dominick Baier. All rights reserved.
 // Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
 
+
 using IdentityModel;
-using IdentityServer4.Extensions;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -13,15 +13,31 @@ namespace IdentityServer4.Models
     /// <summary>
     /// Models a token.
     /// </summary>
-    public class Token : ITokenMetadata
+    public class Token
     {
         /// <summary>
-        /// Gets or sets the audience.
+        /// Initializes a new instance of the <see cref="Token"/> class.
+        /// </summary>
+        public Token()
+        {
+        }
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="Token"/> class.
+        /// </summary>
+        /// <param name="tokenType">Type of the token.</param>
+        public Token(string tokenType)
+        {
+            Type = tokenType;
+        }
+
+        /// <summary>
+        /// Gets or sets the audiences.
         /// </summary>
         /// <value>
-        /// The audience.
+        /// The audiences.
         /// </value>
-        public string Audience { get; set; }
+        public ICollection<string> Audiences { get; set; } = new HashSet<string>();
         
         /// <summary>
         /// Gets or sets the issuer.
@@ -37,7 +53,7 @@ namespace IdentityServer4.Models
         /// <value>
         /// The creation time.
         /// </value>
-        public DateTimeOffset CreationTime { get; set; }
+        public DateTime CreationTime { get; set; } = IdentityServerDateTime.UtcNow;
         
         /// <summary>
         /// Gets or sets the lifetime.
@@ -46,22 +62,30 @@ namespace IdentityServer4.Models
         /// The lifetime.
         /// </value>
         public int Lifetime { get; set; }
-        
+
         /// <summary>
         /// Gets or sets the type.
         /// </summary>
         /// <value>
         /// The type.
         /// </value>
-        public string Type { get; set; }
-        
+        public string Type { get; set; } = OidcConstants.TokenTypes.AccessToken;
+
         /// <summary>
-        /// Gets or sets the client.
+        /// Gets or sets the ID of the client.
         /// </summary>
         /// <value>
-        /// The client.
+        /// The ID of the client.
         /// </value>
-        public Client Client { get; set; }
+        public string ClientId { get; set; }
+
+        /// <summary>
+        /// Gets or sets the type of access token of the client
+        /// </summary>
+        /// <value>
+        /// The access token type specified by the client.
+        /// </value>
+        public AccessTokenType AccessTokenType { get; set; }
 
         /// <summary>
         /// Gets or sets the claims.
@@ -69,7 +93,7 @@ namespace IdentityServer4.Models
         /// <value>
         /// The claims.
         /// </value>
-        public List<Claim> Claims { get; set; }
+        public ICollection<Claim> Claims { get; set; } = new HashSet<Claim>(new ClaimComparer());
 
         /// <summary>
         /// Gets or sets the version.
@@ -77,26 +101,7 @@ namespace IdentityServer4.Models
         /// <value>
         /// The version.
         /// </value>
-        public int Version { get; set; }
-
-        /// <summary>
-        /// Initializes a new instance of the <see cref="Token"/> class.
-        /// </summary>
-        public Token()
-        {
-            Version = 3;
-            Type = OidcConstants.TokenTypes.AccessToken;
-            CreationTime = DateTimeOffsetHelper.UtcNow;
-        }
-
-        /// <summary>
-        /// Initializes a new instance of the <see cref="Token"/> class.
-        /// </summary>
-        /// <param name="tokenType">Type of the token.</param>
-        public Token(string tokenType) : this()
-        {
-            Type = tokenType;
-        }
+        public int Version { get; set; } = 4;
 
         /// <summary>
         /// Gets the subject identifier.
@@ -104,37 +109,14 @@ namespace IdentityServer4.Models
         /// <value>
         /// The subject identifier.
         /// </value>
-        public string SubjectId
-        {
-            get
-            {
-                return Claims.Where(x => x.Type == JwtClaimTypes.Subject).Select(x => x.Value).SingleOrDefault();
-            }
-        }
-
-        /// <summary>
-        /// Gets the client identifier.
-        /// </summary>
-        /// <value>
-        /// The client identifier.
-        /// </value>
-        public string ClientId
-        {
-            get
-            {
-                return Client.ClientId;
-            }
-        }
-
+        public string SubjectId => Claims.Where(x => x.Type == JwtClaimTypes.Subject).Select(x => x.Value).SingleOrDefault();
+      
         /// <summary>
         /// Gets the scopes.
         /// </summary>
         /// <value>
         /// The scopes.
         /// </value>
-        public IEnumerable<string> Scopes
-        {
-            get { return Claims.Where(x => x.Type == JwtClaimTypes.Scope).Select(x => x.Value); }
-        }
+        public IEnumerable<string> Scopes => Claims.Where(x => x.Type == JwtClaimTypes.Scope).Select(x => x.Value);
     }
 }

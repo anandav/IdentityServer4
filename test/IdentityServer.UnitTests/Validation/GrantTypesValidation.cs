@@ -1,10 +1,13 @@
-﻿using FluentAssertions;
+﻿// Copyright (c) Brock Allen & Dominick Baier. All rights reserved.
+// Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
+
+
+using FluentAssertions;
 using IdentityServer4.Models;
 using System;
-using System.Collections.Generic;
 using Xunit;
 
-namespace IdentityServer.UnitTests.Validation
+namespace IdentityServer4.UnitTests.Validation
 {
     public class GrantTypesValidation
     {
@@ -23,7 +26,7 @@ namespace IdentityServer.UnitTests.Validation
         public void custom_should_be_allowed()
         {
             var client = new Client();
-            client.AllowedGrantTypes = GrantTypes.List("custom");
+            client.AllowedGrantTypes = new[] { "custom" };
         }
 
         [Fact]
@@ -31,7 +34,7 @@ namespace IdentityServer.UnitTests.Validation
         public void custom_should_be_allowed_raw()
         {
             var client = new Client();
-            client.AllowedGrantTypes = new List<string> { "custom" };
+            client.AllowedGrantTypes = new[] { "custom" };
         }
         
         [Theory]
@@ -43,7 +46,7 @@ namespace IdentityServer.UnitTests.Validation
         {
             var client = new Client();
 
-            Action act = () => client.AllowedGrantTypes = GrantTypes.List(type1, type2);
+            Action act = () => client.AllowedGrantTypes = new[] { type1, type2 };
 
             act.ShouldThrow<InvalidOperationException>();            
         }
@@ -57,7 +60,7 @@ namespace IdentityServer.UnitTests.Validation
         {
             var client = new Client();
 
-            Action act = () => client.AllowedGrantTypes = GrantTypes.List("custom1", type2, "custom2", type1);
+            Action act = () => client.AllowedGrantTypes = new[] { "custom1", type2, "custom2", type1 };
 
             act.ShouldThrow<InvalidOperationException>();
         }
@@ -67,7 +70,7 @@ namespace IdentityServer.UnitTests.Validation
         {
             var client = new Client();
 
-            Action act = () => client.AllowedGrantTypes = GrantTypes.List("custom1", "custom2", "custom1");
+            Action act = () => client.AllowedGrantTypes = new[] { "custom1", "custom2", "custom1" };
 
             act.ShouldThrow<InvalidOperationException>();
         }
@@ -77,7 +80,7 @@ namespace IdentityServer.UnitTests.Validation
         {
             var client = new Client();
 
-            Action act = () => client.AllowedGrantTypes = GrantTypes.List();
+            Action act = () => client.AllowedGrantTypes = new string[] { };
 
             act.ShouldThrow<InvalidOperationException>();
         }
@@ -87,7 +90,7 @@ namespace IdentityServer.UnitTests.Validation
         {
             var client = new Client();
 
-            Action act = () => client.AllowedGrantTypes = GrantTypes.List("custo m2");
+            Action act = () => client.AllowedGrantTypes = new[] { "custo m2" };
 
             act.ShouldThrow<InvalidOperationException>();
         }
@@ -97,9 +100,35 @@ namespace IdentityServer.UnitTests.Validation
         {
             var client = new Client();
 
-            Action act = () => client.AllowedGrantTypes = GrantTypes.List("custom1", "custo m2", "custom1");
+            Action act = () => client.AllowedGrantTypes = new[] { "custom1", "custo m2", "custom1" };
 
             act.ShouldThrow<InvalidOperationException>();
+        }
+
+        [Fact]
+        public void adding_invalid_value_to_collection_should_throw()
+        {
+            var client = new Client()
+            {
+                AllowedGrantTypes = { "implicit" }
+            };
+
+            Action act = () => client.AllowedGrantTypes.Add("authorization_code");
+
+            act.ShouldThrow<InvalidOperationException>();
+        }
+
+        [Fact]
+        public void adding_valid_value_to_collection_should_succeed()
+        {
+            var client = new Client()
+            {
+                AllowedGrantTypes = { "implicit" }
+            };
+
+            client.AllowedGrantTypes.Add("custom");
+
+            client.AllowedGrantTypes.Count.Should().Be(2);
         }
     }
 }

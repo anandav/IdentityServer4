@@ -1,18 +1,14 @@
-﻿using FluentAssertions;
-using IdentityServer4;
-using IdentityServer4.Models;
-using IdentityServer4.Services.InMemory;
-using IdentityServer4.Tests.Common;
-using System;
-using System.Collections.Generic;
-using System.Linq;
+﻿// Copyright (c) Brock Allen & Dominick Baier. All rights reserved.
+// Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
+
+
+using FluentAssertions;
+using IdentityServer4.IntegrationTests.Common;
 using System.Net;
-using System.Net.Http;
-using System.Security.Claims;
 using System.Threading.Tasks;
 using Xunit;
 
-namespace IdentityServer.IntegrationTests.Endpoints.CheckSession
+namespace IdentityServer4.IntegrationTests.Endpoints.CheckSession
 {
     public class CheckSessionTests
     {

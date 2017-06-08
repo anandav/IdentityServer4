@@ -1,11 +1,10 @@
 ﻿// Copyright (c) Brock Allen & Dominick Baier. All rights reserved.
 // Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
 
-using IdentityServer4.Extensions;
+
 using IdentityServer4.Validation;
 using System.Collections.Generic;
 using System.Collections.Specialized;
-using System.Linq;
 
 namespace IdentityServer4.Models
 {
@@ -31,13 +30,21 @@ namespace IdentityServer4.Models
         public string DisplayMode { get; set; }
 
         /// <summary>
+        /// Gets or sets the redirect URI.
+        /// </summary>
+        /// <value>
+        /// The redirect URI.
+        /// </value>
+        public string RedirectUri { get; set; }
+
+        /// <summary>
         /// The UI locales passed from the authorization request.
         /// </summary>
         /// <value>
         /// The UI locales.
         /// </value>
         public string UiLocales { get; set; }
-        
+
         /// <summary>
         /// The external identity provider requested. This is used to bypass home realm 
         /// discovery (HRD). This is provided via the <c>"idp:"</c> prefix to the <c>acr</c> 
@@ -56,7 +63,7 @@ namespace IdentityServer4.Models
         /// The tenant.
         /// </value>
         public string Tenant { get; set; }
-        
+
         /// <summary>
         /// The expected username the user will use to login. This is requested from the client 
         /// via the <c>login_hint</c> parameter on the authorize request.
@@ -65,7 +72,15 @@ namespace IdentityServer4.Models
         /// The LoginHint.
         /// </value>
         public string LoginHint { get; set; }
-        
+
+        /// <summary>
+        /// Gets or sets the prompt mode.
+        /// </summary>
+        /// <value>
+        /// The prompt mode.
+        /// </value>
+        public string PromptMode { get; set; }
+
         /// <summary>
         /// The acr values passed from the authorization request.
         /// </summary>
@@ -88,14 +103,15 @@ namespace IdentityServer4.Models
         /// <value>
         /// The parameters.
         /// </value>
-        public NameValueCollection Parameters { get; private set; }
+        public NameValueCollection Parameters { get; }
 
-        internal string Nonce
+        /// <summary>
+        /// Initializes a new instance of the <see cref="AuthorizationRequest"/> class.
+        /// </summary>
+        public AuthorizationRequest()
         {
-            get
-            {
-                return Parameters[IdentityModel.OidcConstants.AuthorizeRequest.Nonce];
-            }
+            // public for testing
+            Parameters = new NameValueCollection();
         }
 
         /// <summary>
@@ -103,54 +119,16 @@ namespace IdentityServer4.Models
         /// </summary>
         internal AuthorizationRequest(ValidatedAuthorizeRequest request)
         {
-            // let the login page know the client requesting authorization
             ClientId = request.ClientId;
-
-            // pass through display mode to signin service
-            if (request.DisplayMode.IsPresent())
-            {
-                DisplayMode = request.DisplayMode;
-            }
-
-            // pass through ui locales to signin service
-            if (request.UiLocales.IsPresent())
-            {
-                UiLocales = request.UiLocales;
-            }
-
-            // pass through login_hint
-            if (request.LoginHint.IsPresent())
-            {
-                LoginHint = request.LoginHint;
-            }
-
-            // look for well-known acr value -- idp
-            var idp = request.GetIdP();
-            if (idp.IsPresent())
-            {
-                IdP = idp;
-            }
-
-            // look for well-known acr value -- tenant
-            var tenant = request.GetTenant();
-            if (tenant.IsPresent())
-            {
-                Tenant = tenant;
-            }
-
-            // process acr values
-            var acrValues = request.GetAcrValues();
-            if (acrValues.Any())
-            {
-                AcrValues = acrValues;
-            }
-
-            // scopes
-            if (request.RequestedScopes.Any())
-            {
-                ScopesRequested = request.RequestedScopes;
-            }
-
+            RedirectUri = request.RedirectUri;
+            DisplayMode = request.DisplayMode;
+            UiLocales = request.UiLocales;
+            IdP = request.GetIdP();
+            Tenant = request.GetTenant();
+            LoginHint = request.LoginHint;
+            PromptMode = request.PromptMode;
+            AcrValues = request.GetAcrValues();
+            ScopesRequested = request.RequestedScopes;
             Parameters = request.Raw;
         }
     }

@@ -1,7 +1,9 @@
 ﻿// Copyright (c) Brock Allen & Dominick Baier. All rights reserved.
 // Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
 
+
 using FluentAssertions;
+using IdentityServer4.UnitTests.Common;
 using IdentityServer4.Validation;
 using Microsoft.AspNetCore.Http;
 using System.IO;
@@ -9,7 +11,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Xunit;
 
-namespace IdentityServer4.Tests.Validation
+namespace IdentityServer4.UnitTests.Validation
 {
     public class BearerTokenUsageValidation
     {
@@ -22,7 +24,7 @@ namespace IdentityServer4.Tests.Validation
             var ctx = new DefaultHttpContext();
             ctx.Request.Method = "GET";
 
-            var validator = new BearerTokenUsageValidator();
+            var validator = new BearerTokenUsageValidator(TestLogger.Create< BearerTokenUsageValidator>());
             var result = await validator.ValidateAsync(ctx);
 
             result.TokenFound.Should().BeFalse();
@@ -35,7 +37,7 @@ namespace IdentityServer4.Tests.Validation
             var ctx = new DefaultHttpContext();
             ctx.Request.Method = "POST";
 
-            var validator = new BearerTokenUsageValidator();
+            var validator = new BearerTokenUsageValidator(TestLogger.Create<BearerTokenUsageValidator>());
             var result = await validator.ValidateAsync(ctx);
 
             result.TokenFound.Should().BeFalse();
@@ -49,7 +51,7 @@ namespace IdentityServer4.Tests.Validation
             ctx.Request.Method = "GET";
             ctx.Request.Headers.Add("Authorization", new string[] { "Foo Bar" });
 
-            var validator = new BearerTokenUsageValidator();
+            var validator = new BearerTokenUsageValidator(TestLogger.Create<BearerTokenUsageValidator>());
             var result = await validator.ValidateAsync(ctx);
 
             result.TokenFound.Should().BeFalse();
@@ -63,7 +65,7 @@ namespace IdentityServer4.Tests.Validation
             ctx.Request.Method = "GET";
             ctx.Request.Headers.Add("Authorization", new string[] { "Bearer" });
 
-            var validator = new BearerTokenUsageValidator();
+            var validator = new BearerTokenUsageValidator(TestLogger.Create<BearerTokenUsageValidator>());
             var result = await validator.ValidateAsync(ctx);
 
             result.TokenFound.Should().BeFalse();
@@ -77,7 +79,7 @@ namespace IdentityServer4.Tests.Validation
             ctx.Request.Method = "GET";
             ctx.Request.Headers.Add("Authorization", new string[] { "Bearer           " });
 
-            var validator = new BearerTokenUsageValidator();
+            var validator = new BearerTokenUsageValidator(TestLogger.Create<BearerTokenUsageValidator>());
             var result = await validator.ValidateAsync(ctx);
 
             result.TokenFound.Should().BeFalse();
@@ -91,7 +93,7 @@ namespace IdentityServer4.Tests.Validation
             ctx.Request.Method = "GET";
             ctx.Request.Headers.Add("Authorization", new string[] { "Bearer token" });
 
-            var validator = new BearerTokenUsageValidator();
+            var validator = new BearerTokenUsageValidator(TestLogger.Create<BearerTokenUsageValidator>());
             var result = await validator.ValidateAsync(ctx);
 
             result.TokenFound.Should().BeTrue();
@@ -109,7 +111,7 @@ namespace IdentityServer4.Tests.Validation
             var body = "access_token=token";
             ctx.Request.Body = new MemoryStream(Encoding.UTF8.GetBytes(body));
 
-            var validator = new BearerTokenUsageValidator();
+            var validator = new BearerTokenUsageValidator(TestLogger.Create<BearerTokenUsageValidator>());
             var result = await validator.ValidateAsync(ctx);
 
             result.TokenFound.Should().BeTrue();
@@ -127,7 +129,7 @@ namespace IdentityServer4.Tests.Validation
             var body = "access_token=";
             ctx.Request.Body = new MemoryStream(Encoding.UTF8.GetBytes(body));
 
-            var validator = new BearerTokenUsageValidator();
+            var validator = new BearerTokenUsageValidator(TestLogger.Create<BearerTokenUsageValidator>());
             var result = await validator.ValidateAsync(ctx);
 
             result.TokenFound.Should().BeFalse();
@@ -143,7 +145,7 @@ namespace IdentityServer4.Tests.Validation
             var body = "access_token=                ";
             ctx.Request.Body = new MemoryStream(Encoding.UTF8.GetBytes(body));
 
-            var validator = new BearerTokenUsageValidator();
+            var validator = new BearerTokenUsageValidator(TestLogger.Create<BearerTokenUsageValidator>());
             var result = await validator.ValidateAsync(ctx);
 
             result.TokenFound.Should().BeFalse();
@@ -159,7 +161,7 @@ namespace IdentityServer4.Tests.Validation
             var body = "foo=bar";
             ctx.Request.Body = new MemoryStream(Encoding.UTF8.GetBytes(body));
 
-            var validator = new BearerTokenUsageValidator();
+            var validator = new BearerTokenUsageValidator(TestLogger.Create<BearerTokenUsageValidator>());
             var result = await validator.ValidateAsync(ctx);
 
             result.TokenFound.Should().BeFalse();

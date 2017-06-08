@@ -1,6 +1,10 @@
-﻿using Microsoft.Extensions.Logging;
+﻿// Copyright (c) Brock Allen & Dominick Baier. All rights reserved.
+// Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
 
-namespace UnitTests.Common
+
+using Microsoft.Extensions.Logging;
+
+namespace IdentityServer4.UnitTests.Common
 {
     public static class TestLogger
     {

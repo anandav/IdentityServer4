@@ -1,22 +1,43 @@
-﻿using IdentityServer4.Validation;
-using System.Threading.Tasks;
+﻿// Copyright (c) Brock Allen & Dominick Baier. All rights reserved.
+// Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
 
-namespace IdentityServer4.Tests.Validation
+
+using IdentityServer4.Validation;
+using System.Threading.Tasks;
+using IdentityServer4.Models;
+
+namespace IdentityServer4.UnitTests.Validation
 {
     public class TestResourceOwnerPasswordValidator : IResourceOwnerPasswordValidator
     {
-        public Task<GrantValidationResult> ValidateAsync(string userName, string password, ValidatedTokenRequest request)
+        private string _erroDescription;
+        private TokenRequestErrors _error;
+        private readonly bool _sendError;
+
+        public TestResourceOwnerPasswordValidator()
+        { }
+
+        public TestResourceOwnerPasswordValidator(TokenRequestErrors error, string errorDescription = null)
         {
-            if (userName == password)
+            _sendError = true;
+            _error = error;
+            _erroDescription = errorDescription;
+        }
+
+        public Task ValidateAsync(ResourceOwnerPasswordValidationContext context)
+        {
+            if (_sendError)
             {
-                var result = new GrantValidationResult(request.UserName, "password");
-                return Task.FromResult(result);
+                context.Result = new GrantValidationResult(_error, _erroDescription);
+                return Task.FromResult(0);
             }
-            else
+
+            if (context.UserName == context.Password)
             {
-                var result = new GrantValidationResult("Username and/or password incorrect");
-                return Task.FromResult(result);
+                context.Result = new GrantValidationResult(context.UserName, "password");
             }
+
+            return Task.FromResult(0);
         }
     }
 }

@@ -1,27 +1,33 @@
 ﻿// Copyright (c) Brock Allen & Dominick Baier. All rights reserved.
 // Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
 
+
 using IdentityServer4.Extensions;
 using IdentityServer4.Models;
 using Microsoft.Extensions.DependencyInjection;
 using System.Threading.Tasks;
-using System;
 using System.Linq;
 using IdentityServer4.Services;
 using System.Security.Claims;
 using IdentityModel.Client;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Builder;
-using IdentityServer4.Validation;
+using FluentAssertions;
+using System.Net;
+using IdentityServer4.Configuration;
 
-namespace IdentityServer4.Tests.Common
+namespace IdentityServer4.IntegrationTests.Common
 {
     public class MockIdSvrUiPipeline : IdentityServerPipeline
     {
+        public const string FederatedSignOutPath = "/signout-oidc";
+        public const string FederatedSignOutUrl = "https://server" + FederatedSignOutPath;
+
         public RequestDelegate Login { get; set; }
         public RequestDelegate Logout { get; set; }
         public RequestDelegate Consent { get; set; }
         public RequestDelegate Error { get; set; }
+        public RequestDelegate FederatedSignOut { get; set; }
 
         public MockIdSvrUiPipeline()
         {
@@ -29,6 +35,7 @@ namespace IdentityServer4.Tests.Common
             Logout = OnLogout;
             Consent = OnConsent;
             Error = OnError;
+            FederatedSignOut = OnFederatedSignOut;
 
             this.OnConfigureServices += MockAuthorizationPipeline_OnConfigureServices;
             this.OnPreConfigure += MockAuthorizationPipeline_OnPreConfigure;
@@ -43,8 +50,10 @@ namespace IdentityServer4.Tests.Common
         {
             if (CookieAuthenticationScheme != null)
             {
-                this.Options.AuthenticationOptions.AuthenticationScheme = CookieAuthenticationScheme;
-                app.UseCookieAuthentication(new CookieAuthenticationOptions {
+                var idSvrOptions = app.ApplicationServices.GetRequiredService<IdentityServerOptions>();
+                idSvrOptions.Authentication.AuthenticationScheme = CookieAuthenticationScheme;
+                app.UseCookieAuthentication(new CookieAuthenticationOptions
+                {
                     AuthenticationScheme = CookieAuthenticationScheme
                 });
             }
@@ -71,6 +80,11 @@ namespace IdentityServer4.Tests.Common
             {
                 path.Run(ctx => Error(ctx));
             });
+
+            app.Map(FederatedSignOutPath, path =>
+            {
+                path.Run(ctx => FederatedSignOut(ctx));
+            });
         }
 
         public string CookieAuthenticationScheme { get; set; } = "cookie_authn";
@@ -89,8 +103,8 @@ namespace IdentityServer4.Tests.Common
 
         async Task ReadLoginRequest(HttpContext ctx)
         {
-            var interaction = ctx.RequestServices.GetRequiredService<IUserInteractionService>();
-            LoginRequest = await interaction.GetLoginContextAsync();
+            var interaction = ctx.RequestServices.GetRequiredService<IIdentityServerInteractionService>();
+            LoginRequest = await interaction.GetAuthorizationContextAsync(ctx.Request.Query["returnUrl"].FirstOrDefault());
         }
 
         async Task IssueLoginCookie(HttpContext ctx)
@@ -99,7 +113,7 @@ namespace IdentityServer4.Tests.Common
             {
                 await ctx.Authentication.SignInAsync(CookieAuthenticationScheme, Subject);
                 Subject = null;
-                var url = ctx.Request.Query[this.Options.UserInteractionOptions.LoginReturnUrlParameter].FirstOrDefault();
+                var url = ctx.Request.Query[this.Options.UserInteraction.LoginReturnUrlParameter].FirstOrDefault();
                 if (url != null)
                 {
                     ctx.Response.Redirect(url);
@@ -118,8 +132,8 @@ namespace IdentityServer4.Tests.Common
 
         private async Task ReadLogoutRequest(HttpContext ctx)
         {
-            var interaction = ctx.RequestServices.GetRequiredService<IUserInteractionService>();
-            LogoutRequest = await interaction.GetLogoutContextAsync();
+            var interaction = ctx.RequestServices.GetRequiredService<IIdentityServerInteractionService>();
+            LogoutRequest = await interaction.GetLogoutContextAsync(ctx.Request.Query["logoutId"].FirstOrDefault());
         }
 
         public bool ConsentWasCalled { get; set; }
@@ -135,19 +149,19 @@ namespace IdentityServer4.Tests.Common
 
         async Task ReadConsentMessage(HttpContext ctx)
         {
-            var interaction = ctx.RequestServices.GetRequiredService<IUserInteractionService>();
-            ConsentRequest = await interaction.GetConsentContextAsync();
+            var interaction = ctx.RequestServices.GetRequiredService<IIdentityServerInteractionService>();
+            ConsentRequest = await interaction.GetAuthorizationContextAsync(ctx.Request.Query["returnUrl"].FirstOrDefault());
         }
 
         async Task CreateConsentResponse(HttpContext ctx)
         {
             if (ConsentRequest != null && ConsentResponse != null)
             {
-                var interaction = ctx.RequestServices.GetRequiredService<IUserInteractionService>();
+                var interaction = ctx.RequestServices.GetRequiredService<IIdentityServerInteractionService>();
                 await interaction.GrantConsentAsync(ConsentRequest, ConsentResponse);
                 ConsentResponse = null;
 
-                var url = ctx.Request.Query[this.Options.UserInteractionOptions.ConsentReturnUrlParameter].FirstOrDefault();
+                var url = ctx.Request.Query[this.Options.UserInteraction.ConsentReturnUrlParameter].FirstOrDefault();
                 if (url != null)
                 {
                     ctx.Response.Redirect(url);
@@ -166,8 +180,13 @@ namespace IdentityServer4.Tests.Common
 
         async Task ReadErrorMessage(HttpContext ctx)
         {
-            var interaction = ctx.RequestServices.GetRequiredService<IUserInteractionService>();
-            ErrorMessage = await interaction.GetErrorContextAsync();
+            var interaction = ctx.RequestServices.GetRequiredService<IIdentityServerInteractionService>();
+            ErrorMessage = await interaction.GetErrorContextAsync(ctx.Request.Query["errorId"].FirstOrDefault());
+        }
+
+        Task OnFederatedSignOut(HttpContext ctx)
+        {
+            return Task.FromResult(0);
         }
 
         /* helpers */
@@ -184,9 +203,22 @@ namespace IdentityServer4.Tests.Common
 
         public async Task LoginAsync(string subject)
         {
-            var user = Users.Single(x => x.Subject == subject);
+            var user = Users.Single(x => x.SubjectId == subject);
             var name = user.Claims.Where(x => x.Type == "name").Select(x => x.Value).FirstOrDefault() ?? user.Username;
             await LoginAsync(IdentityServerPrincipal.Create(subject, name));
+        }
+
+        public void RemoveLoginCookie()
+        {
+            BrowserClient.RemoveCookie("https://server/", ".AspNetCore.cookie_authn");
+        }
+        public void RemoveSessionCookie()
+        {
+            BrowserClient.RemoveCookie("https://server/", $"{Options.Authentication.EffectiveAuthenticationScheme}.session");
+        }
+        public Cookie GetSessionCookie()
+        {
+            return BrowserClient.GetCookie("https://server/", $"{Options.Authentication.EffectiveAuthenticationScheme}.session");
         }
 
         public string CreateAuthorizeUrl(
@@ -199,6 +231,8 @@ namespace IdentityServer4.Tests.Common
             string loginHint = null,
             string acrValues = null,
             string responseMode = null,
+            string codeChallenge = null,
+            string codeChallengeMethod = null,
             object extra = null)
         {
             var url = new AuthorizeRequest(AuthorizeEndpoint).CreateAuthorizeUrl(
@@ -211,6 +245,8 @@ namespace IdentityServer4.Tests.Common
                 loginHint: loginHint,
                 acrValues: acrValues,
                 responseMode: responseMode,
+                codeChallenge: codeChallenge,
+                codeChallengeMethod: codeChallengeMethod,
                 extra: extra);
             return url;
         }
@@ -218,6 +254,42 @@ namespace IdentityServer4.Tests.Common
         public IdentityModel.Client.AuthorizeResponse ParseAuthorizationResponseUrl(string url)
         {
             return new IdentityModel.Client.AuthorizeResponse(url);
+        }
+
+        public async Task<IdentityModel.Client.AuthorizeResponse> RequestAuthorizationEndpointAsync(
+            string clientId,
+            string responseType,
+            string scope = null,
+            string redirectUri = null,
+            string state = null,
+            string nonce = null,
+            string loginHint = null,
+            string acrValues = null,
+            string responseMode = null,
+            string codeChallenge = null,
+            string codeChallengeMethod = null,
+            object extra = null)
+        {
+            var old = BrowserClient.AllowAutoRedirect;
+            BrowserClient.AllowAutoRedirect = false;
+
+            var url = CreateAuthorizeUrl(clientId, responseType, scope, redirectUri, state, nonce, loginHint, acrValues, responseMode, codeChallenge, codeChallengeMethod, extra);
+            var result = await BrowserClient.GetAsync(url);
+            result.StatusCode.Should().Be(HttpStatusCode.Found);
+
+            BrowserClient.AllowAutoRedirect = old;
+
+            var redirect = result.Headers.Location.ToString();
+            if (redirect.StartsWith(IdentityServerPipeline.ErrorPage))
+            {
+                // request error page in pipeline so we can get error info
+                await BrowserClient.GetAsync(redirect);
+                
+                // no redirect to client
+                return null;
+            }
+
+            return new IdentityModel.Client.AuthorizeResponse(redirect);
         }
     }
 }

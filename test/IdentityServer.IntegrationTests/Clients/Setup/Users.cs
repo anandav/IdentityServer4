@@ -1,20 +1,21 @@
 ﻿// Copyright (c) Brock Allen & Dominick Baier. All rights reserved.
 // Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
 
+
 using IdentityModel;
-using IdentityServer4.Services.InMemory;
+using IdentityServer4.Test;
 using System.Collections.Generic;
 using System.Security.Claims;
 
-namespace IdentityServer4.Tests.Clients
+namespace IdentityServer4.IntegrationTests.Clients
 {
     static class Users
     {
-        public static List<InMemoryUser> Get()
+        public static List<TestUser> Get()
         {
-            var users = new List<InMemoryUser>
+            var users = new List<TestUser>
             {
-                new InMemoryUser{Subject = "818727", Username = "alice", Password = "alice", 
+                new TestUser{SubjectId = "818727", Username = "alice", Password = "alice", 
                     Claims = new Claim[]
                     {
                         new Claim(JwtClaimTypes.Name, "Alice Smith"),
@@ -25,10 +26,10 @@ namespace IdentityServer4.Tests.Clients
                         new Claim(JwtClaimTypes.Role, "Admin"),
                         new Claim(JwtClaimTypes.Role, "Geek"),
                         new Claim(JwtClaimTypes.WebSite, "http://alice.com"),
-                        new Claim(JwtClaimTypes.Address, @"{ 'street_address': 'One Hacker Way', 'locality': 'Heidelberg', 'postal_code': 69118, 'country': 'Germany' }", Constants.ClaimValueTypes.Json)
+                        new Claim(JwtClaimTypes.Address, @"{ 'street_address': 'One Hacker Way', 'locality': 'Heidelberg', 'postal_code': 69118, 'country': 'Germany' }", IdentityServerConstants.ClaimValueTypes.Json)
                     }
                 },
-                new InMemoryUser{Subject = "88421113", Username = "bob", Password = "bob", 
+                new TestUser{SubjectId = "88421113", Username = "bob", Password = "bob", 
                     Claims = new Claim[]
                     {
                         new Claim(JwtClaimTypes.Name, "Bob Smith"),
@@ -39,9 +40,9 @@ namespace IdentityServer4.Tests.Clients
                         new Claim(JwtClaimTypes.Role, "Developer"),
                         new Claim(JwtClaimTypes.Role, "Geek"),
                         new Claim(JwtClaimTypes.WebSite, "http://bob.com"),
-                        new Claim(JwtClaimTypes.Address, @"{ 'street_address': 'One Hacker Way', 'locality': 'Heidelberg', 'postal_code': 69118, 'country': 'Germany' }", Constants.ClaimValueTypes.Json)
+                        new Claim(JwtClaimTypes.Address, @"{ 'street_address': 'One Hacker Way', 'locality': 'Heidelberg', 'postal_code': 69118, 'country': 'Germany' }", IdentityServerConstants.ClaimValueTypes.Json)
                     }
-                },
+                }
             };
 
             return users;
