@@ -31,13 +31,12 @@ namespace IdentityServer4.ResponseHandling
         /// <summary>
         /// The profile service
         /// </summary>
-        private readonly IProfileService Profile;
+        protected readonly IProfileService Profile;
 
         /// <summary>
         /// The resource store
         /// </summary>
         protected readonly IResourceStore Resources;
-
 
         /// <summary>
         /// Initializes a new instance of the <see cref="UserInfoResponseGenerator"/> class.
@@ -74,12 +73,13 @@ namespace IdentityServer4.ResponseHandling
                 validationResult.TokenValidationResult.Client,
                 IdentityServerConstants.ProfileDataCallers.UserInfoEndpoint,
                 requestedClaimTypes);
+            context.RequestedResources = await GetRequestedResourcesAsync(scopes);
 
             await Profile.GetProfileDataAsync(context);
             var profileClaims = context.IssuedClaims;
 
             // construct outgoing claims
-            List<Claim> outgoingClaims = new List<Claim>();
+            var outgoingClaims = new List<Claim>();
 
             if (profileClaims == null)
             {
@@ -105,6 +105,9 @@ namespace IdentityServer4.ResponseHandling
             return outgoingClaims.ToClaimsDictionary();
         }
 
+        // TODO v3: merge these two APIs to avoid two DB round trips
+        // GetRequestedClaimTypesAsync & GetRequestedResourcesAsync
+       
         /// <summary>
         /// Gets the requested claim types.
         /// </summary>
@@ -120,7 +123,10 @@ namespace IdentityServer4.ResponseHandling
             var scopeString = string.Join(" ", scopes);
             Logger.LogDebug("Scopes in access token: {scopes}", scopeString);
 
-            var identityResources = await Resources.FindEnabledIdentityResourcesByScopeAsync(scopes);
+            var resources = await GetRequestedResourcesAsync(scopes);
+            if (resources == null) return Enumerable.Empty<string>();
+
+            var identityResources = resources.IdentityResources;
             var scopeClaims = new List<string>();
 
             foreach (var scope in scopes)
@@ -134,6 +140,25 @@ namespace IdentityServer4.ResponseHandling
             }
 
             return scopeClaims.Distinct();
+        }
+
+        /// <summary>
+        ///  Gets the identity resources from the scopes.
+        /// </summary>
+        /// <param name="scopes"></param>
+        /// <returns></returns>
+        internal protected virtual async Task<Resources> GetRequestedResourcesAsync(IEnumerable<string> scopes)
+        {
+            if (scopes == null || !scopes.Any())
+            {
+                return null;
+            }
+
+            var scopeString = string.Join(" ", scopes);
+            Logger.LogDebug("Scopes in access token: {scopes}", scopeString);
+
+            var identityResources = await Resources.FindEnabledIdentityResourcesByScopeAsync(scopes);
+            return new Resources(identityResources, Enumerable.Empty<ApiResource>());
         }
     }
 }

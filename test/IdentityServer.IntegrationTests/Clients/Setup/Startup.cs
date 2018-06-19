@@ -11,6 +11,8 @@ namespace IdentityServer4.IntegrationTests.Clients
 {
     public class Startup
     {
+        static public ICustomTokenRequestValidator CustomTokenRequestValidator { get; set; } 
+
         public void ConfigureServices(IServiceCollection services)
         {
             services.AddAuthentication();
@@ -40,13 +42,20 @@ namespace IdentityServer4.IntegrationTests.Clients
             builder.AddExtensionGrantValidator<NoSubjectExtensionGrantValidator>();
             builder.AddExtensionGrantValidator<DynamicParameterExtensionGrantValidator>();
 
-            builder.AddSecretParser<ClientAssertionSecretParser>();
+            builder.AddSecretParser<JwtBearerClientAssertionSecretParser>();
             builder.AddSecretValidator<PrivateKeyJwtSecretValidator>();
+
+            // add a custom token request validator if set
+            if (CustomTokenRequestValidator != null)
+            {
+                builder.Services.AddTransient(r => CustomTokenRequestValidator);
+            }
         }
 
         public void Configure(IApplicationBuilder app)
         {
             app.UseIdentityServer();
+            app.UseAuthentication();
         }
     }
 }

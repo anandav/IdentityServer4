@@ -1,4 +1,4 @@
-﻿// Copyright (c) Brock Allen & Dominick Baier. All rights reserved.
+// Copyright (c) Brock Allen & Dominick Baier. All rights reserved.
 // Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
 
 #pragma warning disable 1591
@@ -41,5 +41,15 @@ namespace IdentityServer4.Events
         private const int ErrorEventsStart = 3000;
 
         public const int UnhandledException = ErrorEventsStart + 0;
+        public const int InvalidClientConfiguration = ErrorEventsStart + 1;
+
+        //////////////////////////////////////////////////////
+        /// Grants related events
+        //////////////////////////////////////////////////////
+        private const int GrantsEventsStart = 4000;
+
+        public const int ConsentGranted = GrantsEventsStart + 0;
+        public const int ConsentDenied = GrantsEventsStart + 1;
+        public const int GrantsRevoked = GrantsEventsStart + 2;
     }
 }

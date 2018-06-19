@@ -1,4 +1,4 @@
-﻿// Copyright (c) Brock Allen & Dominick Baier. All rights reserved.
+// Copyright (c) Brock Allen & Dominick Baier. All rights reserved.
 // Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
 
 
@@ -9,18 +9,18 @@ using IdentityServer4.Models;
 namespace IdentityServer4.Validation
 {
     /// <summary>
-    /// Default resource owner password validator (not implementation == not supported)
+    /// Default resource owner password validator (no implementation == not supported)
     /// </summary>
     /// <seealso cref="IdentityServer4.Validation.IResourceOwnerPasswordValidator" />
-    internal class NotSupportedResouceOwnerPasswordValidator : IResourceOwnerPasswordValidator
+    public class NotSupportedResourceOwnerPasswordValidator : IResourceOwnerPasswordValidator
     {
         private readonly ILogger _logger;
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="NotSupportedResouceOwnerPasswordValidator"/> class.
+        /// Initializes a new instance of the <see cref="NotSupportedResourceOwnerPasswordValidator"/> class.
         /// </summary>
         /// <param name="logger">The logger.</param>
-        public NotSupportedResouceOwnerPasswordValidator(ILogger<NotSupportedResouceOwnerPasswordValidator> logger)
+        public NotSupportedResourceOwnerPasswordValidator(ILogger<NotSupportedResourceOwnerPasswordValidator> logger)
         {
             _logger = logger;
         }
@@ -34,8 +34,8 @@ namespace IdentityServer4.Validation
         {
             context.Result = new GrantValidationResult(TokenRequestErrors.UnsupportedGrantType);
 
-            _logger.LogWarning("Resource owner password credential type not supported. Configure an IResourceOwnerPasswordValidator.");
-            return Task.FromResult(0);
+            _logger.LogInformation("Resource owner password credential type not supported. Configure an IResourceOwnerPasswordValidator.");
+            return Task.CompletedTask;
         }
     }
 }

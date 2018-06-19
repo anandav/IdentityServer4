@@ -1,4 +1,4 @@
-﻿// Copyright (c) Brock Allen & Dominick Baier. All rights reserved.
+// Copyright (c) Brock Allen & Dominick Baier. All rights reserved.
 // Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
 
 
@@ -24,7 +24,6 @@ namespace IdentityServer4.Stores
         /// </summary>
         public InMemoryResourcesStore(IEnumerable<IdentityResource> identityResources = null, IEnumerable<ApiResource> apiResources = null)
         {
-
             if (identityResources?.HasDuplicates(m => m.Name) == true)
             {
                 throw new ArgumentException("Identity resources must not contain duplicate names");
@@ -43,7 +42,7 @@ namespace IdentityServer4.Stores
         /// Gets all resources.
         /// </summary>
         /// <returns></returns>
-        public Task<Resources> GetAllResources()
+        public Task<Resources> GetAllResourcesAsync()
         {
             var result = new Resources(_identityResources, _apiResources);
             return Task.FromResult(result);
@@ -90,8 +89,8 @@ namespace IdentityServer4.Stores
             if (names == null) throw new ArgumentNullException(nameof(names));
 
             var api = from a in _apiResources
-                      from s in a.Scopes
-                      where names.Contains(s.Name)
+                      let scopes = (from s in a.Scopes where names.Contains(s.Name) select s)
+                      where scopes.Any()
                       select a;
 
             return Task.FromResult(api);

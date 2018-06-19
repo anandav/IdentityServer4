@@ -80,6 +80,7 @@ namespace IdentityServer4.Services
                     request.Client,
                     IdentityServerConstants.ProfileDataCallers.ClaimsProviderIdentityToken,
                     additionalClaimTypes);
+                context.RequestedResources = resources;
 
                 await Profile.GetProfileDataAsync(context);
 
@@ -125,9 +126,9 @@ namespace IdentityServer4.Services
                     {
                         var claimType = claim.Type;
 
-                        if (request.Client.PrefixClientClaims)
+                        if (request.Client.ClientClaimsPrefix.IsPresent())
                         {
-                            claimType = "client_" + claimType;
+                            claimType = request.Client.ClientClaimsPrefix + claimType;
                         }
 
                         outputClaims.Add(new Claim(claimType, claim.Value, claim.ValueType));
@@ -192,6 +193,7 @@ namespace IdentityServer4.Services
                     request.Client,
                     IdentityServerConstants.ProfileDataCallers.ClaimsProviderAccessToken,
                     additionalClaimTypes.Distinct());
+                context.RequestedResources = resources;
 
                 await Profile.GetProfileDataAsync(context);
 

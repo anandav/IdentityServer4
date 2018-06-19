@@ -1,4 +1,4 @@
-﻿// Copyright (c) Brock Allen & Dominick Baier. All rights reserved.
+// Copyright (c) Brock Allen & Dominick Baier. All rights reserved.
 // Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
 
 
@@ -116,7 +116,7 @@ namespace Host.Configuration
                     AllowedGrantTypes = GrantTypes.Hybrid,
                     RequirePkce = true,
 
-                    RedirectUris = { "http://127.0.0.1" },
+                    RedirectUris = { "http://127.0.0.1", "sample-windows-client://callback" },
 
                     AllowOfflineAccess = true,
 
@@ -159,7 +159,7 @@ namespace Host.Configuration
                     AllowAccessTokensViaBrowser = true,
 
                     RedirectUris =  { "http://localhost:44077/signin-oidc" },
-                    LogoutUri = "http://localhost:44077/signout-oidc",
+                    FrontChannelLogoutUri = "http://localhost:44077/signout-oidc",
                     PostLogoutRedirectUris = { "http://localhost:44077/signout-callback-oidc" },
 
                     AllowedScopes =
@@ -182,15 +182,19 @@ namespace Host.Configuration
 
                     AllowedGrantTypes = GrantTypes.Implicit,
 
-                    RedirectUris = { "http://localhost:44077/home/callback" },
-                    LogoutUri = "http://localhost:44077/signout-oidc",
-                    PostLogoutRedirectUris = { "http://localhost:44077/" },
+                    RedirectUris = { "http://localhost:44078/home/callback" },
+                    PostLogoutRedirectUris = { "http://localhost:44078/" },
+                    FrontChannelLogoutUri = "http://localhost:44078/home/FrontChannelLogout",
+                    BackChannelLogoutUri = "http://localhost:44078/home/BackChannelLogout",
 
-                    AllowedScopes = { IdentityServerConstants.StandardScopes.OpenId }
+                    AllowedScopes = {
+                        IdentityServerConstants.StandardScopes.OpenId,
+                        IdentityServerConstants.StandardScopes.Profile,
+                    }
                 },
 
                 ///////////////////////////////////////////
-                // MVC Hybrid Flow Samples
+                // MVC Hybrid Flow Sample
                 //////////////////////////////////////////
                 new Client
                 {
@@ -208,12 +212,43 @@ namespace Host.Configuration
                     AllowAccessTokensViaBrowser = false,
 
                     RedirectUris = { "http://localhost:21402/signin-oidc" },
-                    LogoutUri = "http://localhost:21402/signout-oidc",
+                    FrontChannelLogoutUri = "http://localhost:21402/signout-oidc",
                     PostLogoutRedirectUris = { "http://localhost:21402/signout-callback-oidc" },
 
                     AllowOfflineAccess = true,
 
                     AllowedScopes = 
+                    {
+                        IdentityServerConstants.StandardScopes.OpenId,
+                        IdentityServerConstants.StandardScopes.Profile,
+                        IdentityServerConstants.StandardScopes.Email,
+                        "api1", "api2.read_only"
+                    }
+                },
+                ///////////////////////////////////////////
+                // MVC Hybrid Flow Sample (Back Channel logout)
+                //////////////////////////////////////////
+                new Client
+                {
+                    ClientId = "mvc.hybrid.backchannel",
+                    ClientName = "MVC Hybrid (with BackChannel logout)",
+                    ClientUri = "http://identityserver.io",
+
+                    ClientSecrets =
+                    {
+                        new Secret("secret".Sha256())
+                    },
+
+                    AllowedGrantTypes = GrantTypes.Hybrid,
+                    AllowAccessTokensViaBrowser = false,
+
+                    RedirectUris = { "http://localhost:21403/signin-oidc" },
+                    BackChannelLogoutUri = "http://localhost:21403/logout",
+                    PostLogoutRedirectUris = { "http://localhost:21403/signout-callback-oidc" },
+
+                    AllowOfflineAccess = true,
+
+                    AllowedScopes =
                     {
                         IdentityServerConstants.StandardScopes.OpenId,
                         IdentityServerConstants.StandardScopes.Profile,
@@ -252,7 +287,7 @@ namespace Host.Configuration
                     AllowedGrantTypes = GrantTypes.Implicit,
                     AllowAccessTokensViaBrowser = true,
                     RequireClientSecret = false,
-                    AccessTokenType = AccessTokenType.Reference,
+                    AccessTokenType = AccessTokenType.Jwt,
 
                     RedirectUris = 
                     {
@@ -270,7 +305,7 @@ namespace Host.Configuration
                         IdentityServerConstants.StandardScopes.OpenId,
                         IdentityServerConstants.StandardScopes.Profile,
                         IdentityServerConstants.StandardScopes.Email,
-                        "api1", "api2.read_only"
+                        "api1", "api2.read_only", "api2.full_access"
                     }
                 }
             };

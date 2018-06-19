@@ -1,4 +1,4 @@
-﻿// Copyright (c) Brock Allen & Dominick Baier. All rights reserved.
+// Copyright (c) Brock Allen & Dominick Baier. All rights reserved.
 // Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
 
 
@@ -16,7 +16,6 @@ namespace IdentityServer4.Hosting
     /// </summary>
     public class IdentityServerMiddleware
     {
-        private readonly IEventService _events;
         private readonly RequestDelegate _next;
         private readonly ILogger _logger;
 
@@ -24,12 +23,10 @@ namespace IdentityServer4.Hosting
         /// Initializes a new instance of the <see cref="IdentityServerMiddleware"/> class.
         /// </summary>
         /// <param name="next">The next.</param>
-        /// <param name="events">The events.</param>
         /// <param name="logger">The logger.</param>
-        public IdentityServerMiddleware(RequestDelegate next, IEventService events, ILogger<IdentityServerMiddleware> logger)
+        public IdentityServerMiddleware(RequestDelegate next, ILogger<IdentityServerMiddleware> logger)
         {
             _next = next;
-            _events = events;
             _logger = logger;
         }
 
@@ -38,9 +35,15 @@ namespace IdentityServer4.Hosting
         /// </summary>
         /// <param name="context">The context.</param>
         /// <param name="router">The router.</param>
+        /// <param name="session">The user session.</param>
+        /// <param name="events">The event service.</param>
         /// <returns></returns>
-        public async Task Invoke(HttpContext context, IEndpointRouter router)
+        public async Task Invoke(HttpContext context, IEndpointRouter router, IUserSession session, IEventService events)
         {
+            // this will check the authentication session and from it emit the check session
+            // cookie needed from JS-based signout clients.
+            await session.EnsureSessionIdCookieAsync();
+
             try
             {
                 var endpoint = router.Find(context);
@@ -61,8 +64,8 @@ namespace IdentityServer4.Hosting
             }
             catch (Exception ex)
             {
-                await _events.RaiseAsync(new UnhandledExceptionEvent(ex));
-                _logger.LogCritical("Unhandled exception: {exception}", ex.ToString());
+                await events.RaiseAsync(new UnhandledExceptionEvent(ex));
+                _logger.LogCritical(ex, "Unhandled exception: {exception}", ex.Message);
                 throw;
             }
 

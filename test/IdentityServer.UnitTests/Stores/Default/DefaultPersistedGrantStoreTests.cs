@@ -19,14 +19,14 @@ namespace IdentityServer4.UnitTests.Stores.Default
 {
     public class DefaultPersistedGrantStoreTests
     {
-        InMemoryPersistedGrantStore _store = new InMemoryPersistedGrantStore();
-        IAuthorizationCodeStore _codes;
-        IRefreshTokenStore _refreshTokens;
-        IReferenceTokenStore _referenceTokens;
-        IUserConsentStore _userConsent;
-        StubHandleGenerationService _stubHandleGenerationService = new StubHandleGenerationService();
+        private InMemoryPersistedGrantStore _store = new InMemoryPersistedGrantStore();
+        private IAuthorizationCodeStore _codes;
+        private IRefreshTokenStore _refreshTokens;
+        private IReferenceTokenStore _referenceTokens;
+        private IUserConsentStore _userConsent;
+        private StubHandleGenerationService _stubHandleGenerationService = new StubHandleGenerationService();
 
-        ClaimsPrincipal _user = IdentityServerPrincipal.Create("123", "bob");
+        private ClaimsPrincipal _user = new IdentityServerUser("123").CreatePrincipal();
 
         public DefaultPersistedGrantStoreTests()
         {
@@ -73,7 +73,7 @@ namespace IdentityServer4.UnitTests.Stores.Default
             code1.CodeChallenge.Should().Be(code2.CodeChallenge);
             code1.RedirectUri.Should().Be(code2.RedirectUri);
             code1.Nonce.Should().Be(code2.Nonce);
-            code1.RequestedScopes.ShouldBeEquivalentTo(code2.RequestedScopes);
+            code1.RequestedScopes.Should().BeEquivalentTo(code2.RequestedScopes);
         }
 
         [Fact]
@@ -280,6 +280,7 @@ namespace IdentityServer4.UnitTests.Stores.Default
         {
             var consent1 = new Consent()
             {
+                CreationTime = DateTime.UtcNow,
                 ClientId = "client",
                 SubjectId = "123",
                 Scopes = new string[] { "foo", "bar" }
@@ -290,7 +291,7 @@ namespace IdentityServer4.UnitTests.Stores.Default
 
             consent2.ClientId.Should().Be(consent1.ClientId);
             consent2.SubjectId.Should().Be(consent1.SubjectId);
-            consent2.Scopes.ShouldBeEquivalentTo(new string[] { "bar", "foo" });
+            consent2.Scopes.Should().BeEquivalentTo(new string[] { "bar", "foo" });
         }
 
         [Fact]
@@ -298,6 +299,7 @@ namespace IdentityServer4.UnitTests.Stores.Default
         {
             var consent1 = new Consent()
             {
+                CreationTime = DateTime.UtcNow,
                 ClientId = "client",
                 SubjectId = "123",
                 Scopes = new string[] { "foo", "bar" }

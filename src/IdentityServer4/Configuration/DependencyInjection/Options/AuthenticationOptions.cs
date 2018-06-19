@@ -1,10 +1,8 @@
-﻿// Copyright (c) Brock Allen & Dominick Baier. All rights reserved.
+// Copyright (c) Brock Allen & Dominick Baier. All rights reserved.
 // Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
 
 
 using System;
-using Microsoft.AspNetCore.Http;
-using System.Collections.Generic;
 
 namespace IdentityServer4.Configuration
 {
@@ -14,21 +12,7 @@ namespace IdentityServer4.Configuration
     public class AuthenticationOptions
     {
         /// <summary>
-        /// Calculates the effective authentication scheme - either none is set, and we default to our constant
-        /// or it is set to the scheme of the cookie authentication middleware we should use for maintaing the authentication session
-        /// </summary>
-        internal string EffectiveAuthenticationScheme => AuthenticationScheme ?? IdentityServerConstants.DefaultCookieAuthenticationScheme;
-
-        /// <summary>
-        /// Gets or sets the authentication scheme if you have registered a custom cookie authentication middleware.
-        /// </summary>
-        /// <value>
-        /// The authentication scheme.
-        /// </value>
-        public string AuthenticationScheme { get; set; }
-
-        /// <summary>
-        /// Sets the cookie lifetime (only effective if the built-in cookie middleware is used)
+        /// Sets the cookie lifetime (only effective if the IdentityServer-provided cookie handler is used)
         /// </summary>
         public TimeSpan CookieLifetime { get; set; } = Constants.DefaultCookieTimeSpan;
 
@@ -46,11 +30,18 @@ namespace IdentityServer4.Configuration
         public bool RequireAuthenticatedUserForSignOutMessage { get; set; } = false;
 
         /// <summary>
-        /// Gets or sets the federated sign out paths.
+        /// Gets or sets the name of the cookie used for the check session endpoint.
         /// </summary>
-        /// <value>
-        /// The federated sign out paths.
-        /// </value>
-        public ICollection<PathString> FederatedSignOutPaths { get; set; } = new List<PathString>();
+        public string CheckSessionCookieName { get; set; } = IdentityServerConstants.DefaultCheckSessionCookieName;
+
+        /// <summary>
+        /// Gets or sets the timeout on the back channel logout HTTP call.
+        /// </summary>
+        public TimeSpan BackChannelLogoutTimeOut { get; set; } = TimeSpan.FromSeconds(30);
+
+        /// <summary>
+        /// If set, will require frame-src CSP headers being emitting on the end session callback endpoint which renders iframes to clients for front-channel signout notification.
+        /// </summary>
+        public bool RequireCspFrameSrcForSignout { get; set; } = true;
     }
 }

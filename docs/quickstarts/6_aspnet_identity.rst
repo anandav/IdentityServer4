@@ -16,13 +16,13 @@ New Project for ASP.NET Identity
 
 The first step is to add a new project for ASP.NET Identity to your solution.
 Given that a lot of code is required for ASP.NET Identity, it makes sense to use the template from Visual Studio.
-You will eventually delete the old project for IdentityServer (assuming you were following the other quickstarts), but there are several items that you will need to migrate over (or rewrite from scratch as decribed in the prior quickstarts).
+You will eventually delete the old project for IdentityServer (assuming you were following the other quickstarts), but there are several items that you will need to migrate over (or rewrite from scratch as described in the prior quickstarts).
 
 Start by creating a new "ASP.NET Core Web Application" project.
 
 .. image:: images/6_new_web_project.png
 
-Then select the "Web Application Template" option.
+Then select the "Web Application Template (Model-View-Controller)" option.
 
 .. image:: images/6_web_app_template.png
 
@@ -43,7 +43,7 @@ This is important so the existing clients and api projects will continue to work
 Add IdentityServer packages
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Add the ``IdentityServer4.AspNetIdentity`` NuGet package (at least version "1.0.1").
+Add the ``IdentityServer4.AspNetIdentity`` NuGet package.
 This depends on the ``IdentityServer4`` package, so that's automatically added as a transitive dependency.
 
 .. image:: images/6_nuget.png
@@ -53,7 +53,7 @@ Scopes and Clients Configuration
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Despite this being a new project for IdentityServer, we still need the same scope and client configuration as the prior quickstarts.
-Copy the configuration class (in `Config.cs <https://github.com/IdentityServer/IdentityServer4.Samples/blob/dev/Quickstarts/1_ClientCredentials/src/QuickstartIdentityServer/Config.cs>`_) you used for the previous quickstarts into this new project.
+Copy the configuration class (in `Config.cs <https://github.com/IdentityServer/IdentityServer4.Samples/blob/release/Quickstarts/5_HybridFlowAuthenticationWithApiAccess/src/QuickstartIdentityServer/Config.cs>`_) you used for the previous quickstarts into this new project.
 
 One change to the configuration that is necessary (for now) is to disable consent for the MVC client.
 We've not yet copied over the consent code from the prior IdentityServer project, so for now make this one modification to the MVC client and set ``RequireConsent=false``::
@@ -105,36 +105,36 @@ The ``AddAspNetIdentity`` extension method requires a generic parameter which is
             .AddEntityFrameworkStores<ApplicationDbContext>()
             .AddDefaultTokenProviders();
 
+        // Add application services.
+        services.AddTransient<IEmailSender, EmailSender>();
+
         services.AddMvc();
 
-        services.AddTransient<IEmailSender, AuthMessageSender>();
-        services.AddTransient<ISmsSender, AuthMessageSender>();
-
-        // Adds IdentityServer
+        // configure identity server with in-memory stores, keys, clients and scopes
         services.AddIdentityServer()
-            .AddTemporarySigningCredential()
+            .AddDeveloperSigningCredential()
+            .AddInMemoryPersistedGrants()
             .AddInMemoryIdentityResources(Config.GetIdentityResources())
             .AddInMemoryApiResources(Config.GetApiResources())
             .AddInMemoryClients(Config.GetClients())
             .AddAspNetIdentity<ApplicationUser>();
     }
 
+.. note:: It's important when using ASP.NET Identity that IdentityServer be registered *after* ASP.NET Identity in the DI system because IdentityServer is overwriting some configuration from ASP.NET Identity.
+    
 **Configure**
 
-This shows both the template code generated for ASP.NET Identity, plus the additions needed for IdentityServer (just after ``UseIdentity``).
-It's important when using ASP.NET Identity that IdentityServer be registered *after* ASP.NET Identity in the pipeline because IdentityServer is relying upon the authentication cookie that ASP.NET Identity creates and manages. 
+This shows both the template code generated for ASP.NET Identity, plus the call to ``UseIdentityServer`` which replaces the call to ``UseIdentity``.
+
 ::
 
-    public void Configure(IApplicationBuilder app, IHostingEnvironment env, ILoggerFactory loggerFactory)
+    public void Configure(IApplicationBuilder app, IHostingEnvironment env)
     {
-        loggerFactory.AddConsole(Configuration.GetSection("Logging"));
-        loggerFactory.AddDebug();
-
         if (env.IsDevelopment())
         {
             app.UseDeveloperExceptionPage();
-            app.UseDatabaseErrorPage();
             app.UseBrowserLink();
+            app.UseDatabaseErrorPage();
         }
         else
         {
@@ -143,9 +143,7 @@ It's important when using ASP.NET Identity that IdentityServer be registered *af
 
         app.UseStaticFiles();
 
-        app.UseIdentity();
-
-        // Adds IdentityServer
+        // app.UseAuthentication(); // not needed, since UseIdentityServer adds the authentication middleware
         app.UseIdentityServer();
 
         app.UseMvc(routes =>
@@ -161,7 +159,7 @@ Creating the user database
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Given that this is a new ASP.NET Identity project, you will need to create the database.
-You can do this by running a command prompt from the project directory and running ``dotnet ef database update``, like this:
+You can do this by running a command prompt from the project directory and running ``dotnet ef database update -c ApplicationDbContext``, like this:
 
 .. image:: images/6_ef_database_update.png
 

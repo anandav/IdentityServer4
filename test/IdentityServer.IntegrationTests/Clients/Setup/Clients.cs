@@ -10,7 +10,7 @@ using IdentityServer4.IntegrationTests.Common;
 
 namespace IdentityServer4.IntegrationTests.Clients
 {
-    class Clients
+    internal class Clients
     {
         public static IEnumerable<Client> Get()
         {
@@ -99,6 +99,28 @@ namespace IdentityServer4.IntegrationTests.Clients
                         "roles",
                         "api1", "api2", "api4.with.roles"
                     }
+                },
+                new Client
+                {
+                    ClientId = "roclient.reuse",
+                    ClientSecrets =
+                    {
+                        new Secret("secret".Sha256())
+                    },
+
+                    AllowedGrantTypes = GrantTypes.ResourceOwnerPassword,
+
+                    AllowOfflineAccess = true,
+                    AllowedScopes =
+                    {
+                        IdentityServerConstants.StandardScopes.OpenId,
+                        IdentityServerConstants.StandardScopes.Email,
+                        IdentityServerConstants.StandardScopes.Address,
+                        "roles",
+                        "api1", "api2", "api4.with.roles"
+                    },
+
+                    RefreshTokenUsage = TokenUsage.ReUse
                 },
 
                 /////////////////////////////////////////

@@ -6,26 +6,26 @@ using System.Threading.Tasks;
 using IdentityServer4.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
-using IdentityServer4.Services;
+using IdentityServer4.Configuration;
 
 namespace IdentityServer4.Endpoints.Results
 {
-    class CheckSessionResult : IEndpointResult
+    internal class CheckSessionResult : IEndpointResult
     {
         public CheckSessionResult()
         {
         }
 
-        internal CheckSessionResult(ISessionIdService sessionId)
+        internal CheckSessionResult(IdentityServerOptions options)
         {
-            _sessionId = sessionId;
+            _options = options;
         }
 
-        private ISessionIdService _sessionId;
+        private IdentityServerOptions _options;
 
-        void Init(HttpContext context)
+        private void Init(HttpContext context)
         {
-            _sessionId = _sessionId ?? context.RequestServices.GetRequiredService<ISessionIdService>();
+            _options = _options ?? context.RequestServices.GetRequiredService<IdentityServerOptions>();
         }
 
         public async Task ExecuteAsync(HttpContext context)
@@ -34,33 +34,23 @@ namespace IdentityServer4.Endpoints.Results
 
             AddCspHeaders(context);
 
-            var html = GetHtml(_sessionId.GetCookieName());
+            var html = GetHtml(_options.Authentication.CheckSessionCookieName);
             await context.Response.WriteHtmlAsync(html);
         }
 
         private void AddCspHeaders(HttpContext context)
         {
-            // 'unsafe-inline' for edge
-            var value = "default-src 'none'; script-src 'unsafe-inline' 'sha256-VDXN0nOpFPQ102CIVz+eimHA5e+wTeoUUQj5ZYbtn8w='";
-
-            if (!context.Response.Headers.ContainsKey("Content-Security-Policy"))
-            {
-                context.Response.Headers.Add("Content-Security-Policy", value);
-            }
-
-            if (!context.Response.Headers.ContainsKey("X-Content-Security-Policy"))
-            {
-                context.Response.Headers.Add("X-Content-Security-Policy", value);
-            }
+            context.Response.AddScriptCspHeaders(_options.Csp, "sha256-ZT3q7lL9GXNGhPTB1Vvrvds2xw/kOV0zoeok2tiV23I=");
         }
-
-        string GetHtml(string cookieName)
+        private string GetHtml(string cookieName)
         {
-            return _html.Replace("{cookieName}", cookieName);
+            return Html.Replace("{cookieName}", cookieName);
         }
 
-        const string _html = @"
+        private const string Html = @"
 <!DOCTYPE html>
+<!--Copyright (c) Brock Allen & Dominick Baier. All rights reserved.-->
+<!--Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.-->
 <html>
 <head>
     <meta http-equiv='X-UA-Compatible' content='IE=edge' />
@@ -312,13 +302,14 @@ if (typeof define == 'function' && define.amd) define([], function() { return Sh
                     return 'error';
                 }
 
-                var messageParts = message.split(' ');
-                if (messageParts.length !== 2) {
+                var idx = message.lastIndexOf(' ');
+                if (idx < 0 || idx >= message.length) {
                     return 'error';
                 }
 
-                var clientId = messageParts[0];
-                var sessionState = messageParts[1];
+                var clientId = message.substring(0, idx);
+                var sessionState = message.substring(idx + 1);
+
                 if (!clientId || !sessionState) {
                     return 'error';
                 }

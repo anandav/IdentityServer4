@@ -20,11 +20,11 @@ namespace IdentityServer4.Endpoints
     /// <summary>
     /// The revocation endpoint
     /// </summary>
-    /// <seealso cref="IdentityServer4.Hosting.IEndpoint" />
-    class TokenRevocationEndpoint : IEndpoint
+    /// <seealso cref="IdentityServer4.Hosting.IEndpointHandler" />
+    internal class TokenRevocationEndpoint : IEndpointHandler
     {
         private readonly ILogger _logger;
-        private readonly ClientSecretValidator _clientValidator;
+        private readonly IClientSecretValidator _clientValidator;
         private readonly ITokenRevocationRequestValidator _requestValidator;
         private readonly ITokenRevocationResponseGenerator _responseGenerator;
         private readonly IEventService _events;
@@ -38,7 +38,7 @@ namespace IdentityServer4.Endpoints
         /// <param name="responseGenerator">The response generator.</param>
         /// <param name="events">The events.</param>
         public TokenRevocationEndpoint(ILogger<TokenRevocationEndpoint> logger,
-            ClientSecretValidator clientValidator,
+            IClientSecretValidator clientValidator,
             ITokenRevocationRequestValidator requestValidator,
             ITokenRevocationResponseGenerator responseGenerator,
             IEventService events)
@@ -60,7 +60,7 @@ namespace IdentityServer4.Endpoints
         {
             _logger.LogTrace("Processing revocation request.");
 
-            if (context.Request.Method != "POST")
+            if (!HttpMethods.IsPost(context.Request.Method))
             {
                 _logger.LogWarning("Invalid HTTP method");
                 return new StatusCodeResult(HttpStatusCode.MethodNotAllowed);

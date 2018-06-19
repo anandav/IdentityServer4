@@ -1,10 +1,11 @@
-﻿// Copyright (c) Brock Allen & Dominick Baier. All rights reserved.
+// Copyright (c) Brock Allen & Dominick Baier. All rights reserved.
 // Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
 
 
 using IdentityModel;
+using IdentityServer4.Events;
 using IdentityServer4.Extensions;
-using IdentityServer4.Models;
+using IdentityServer4.Services;
 using IdentityServer4.Validation;
 using Microsoft.Extensions.Logging;
 using System.Collections.Generic;
@@ -20,16 +21,26 @@ namespace IdentityServer4.ResponseHandling
     public class IntrospectionResponseGenerator : IIntrospectionResponseGenerator
     {
         /// <summary>
+        /// Gets the events.
+        /// </summary>
+        /// <value>
+        /// The events.
+        /// </value>
+        protected readonly IEventService Events;
+
+        /// <summary>
         /// The logger
         /// </summary>
         protected readonly ILogger Logger;
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="IntrospectionResponseGenerator"/> class.
+        /// Initializes a new instance of the <see cref="IntrospectionResponseGenerator" /> class.
         /// </summary>
+        /// <param name="events">The events.</param>
         /// <param name="logger">The logger.</param>
-        public IntrospectionResponseGenerator(ILogger<IntrospectionResponseGenerator> logger)
+        public IntrospectionResponseGenerator(IEventService events, ILogger<IntrospectionResponseGenerator> logger)
         {
+            Events = events;
             Logger = logger;
         }
 
@@ -52,11 +63,13 @@ namespace IdentityServer4.ResponseHandling
             if (validationResult.IsActive == false)
             {
                 Logger.LogDebug("Creating introspection response for inactive token.");
+                await Events.RaiseAsync(new TokenIntrospectionSuccessEvent(validationResult));
+
                 return response;
             }
 
             // expected scope not present
-            if (await AreExpectedScopesPresent(validationResult) == false)
+            if (await AreExpectedScopesPresentAsync(validationResult) == false)
             {
                 return response;
             }
@@ -75,6 +88,7 @@ namespace IdentityServer4.ResponseHandling
             scopes = scopes.Where(x => allowedScopes.Contains(x));
             response.Add("scope", scopes.ToSpaceSeparatedString());
 
+            await Events.RaiseAsync(new TokenIntrospectionSuccessEvent(validationResult));
             return response;
         }
 
@@ -83,11 +97,12 @@ namespace IdentityServer4.ResponseHandling
         /// </summary>
         /// <param name="validationResult">The validation result.</param>
         /// <returns></returns>
-        protected virtual Task<bool> AreExpectedScopesPresent(IntrospectionRequestValidationResult validationResult)
+        protected virtual async Task<bool> AreExpectedScopesPresentAsync(IntrospectionRequestValidationResult validationResult)
         {
             var apiScopes = validationResult.Api.Scopes.Select(x => x.Name);
-            var tokenScopesThatMatchApi = validationResult.Claims.Where(
-                c => c.Type == JwtClaimTypes.Scope && apiScopes.Contains(c.Value));
+            var tokenScopes = validationResult.Claims.Where(c => c.Type == JwtClaimTypes.Scope);
+
+            var tokenScopesThatMatchApi = tokenScopes.Where(c => apiScopes.Contains(c.Value));
 
             var result = false;
 
@@ -100,9 +115,10 @@ namespace IdentityServer4.ResponseHandling
             {
                 // no scopes for this API are found in the token
                 Logger.LogError("Expected scope {scopes} is missing in token", apiScopes);
+                await Events.RaiseAsync(new TokenIntrospectionFailureEvent(validationResult.Api.Name, "Expected scopes are missing", validationResult.Token, apiScopes, tokenScopes.Select(s => s.Value)));
             }
 
-            return Task.FromResult(result);
+            return result;
         }
     }
 }

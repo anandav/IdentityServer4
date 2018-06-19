@@ -1,4 +1,4 @@
-﻿// Copyright (c) Brock Allen & Dominick Baier. All rights reserved.
+// Copyright (c) Brock Allen & Dominick Baier. All rights reserved.
 // Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
 
 
@@ -20,10 +20,10 @@ namespace IdentityServer4.Endpoints
     /// <summary>
     /// The token endpoint
     /// </summary>
-    /// <seealso cref="IdentityServer4.Hosting.IEndpoint" />
-    class TokenEndpoint : IEndpoint
+    /// <seealso cref="IdentityServer4.Hosting.IEndpointHandler" />
+    internal class TokenEndpoint : IEndpointHandler
     {
-        private readonly ClientSecretValidator _clientValidator;
+        private readonly IClientSecretValidator _clientValidator;
         private readonly ITokenRequestValidator _requestValidator;
         private readonly ITokenResponseGenerator _responseGenerator;
         private readonly IEventService _events;
@@ -37,7 +37,12 @@ namespace IdentityServer4.Endpoints
         /// <param name="responseGenerator">The response generator.</param>
         /// <param name="events">The events.</param>
         /// <param name="logger">The logger.</param>
-        public TokenEndpoint(ClientSecretValidator clientValidator, ITokenRequestValidator requestValidator, ITokenResponseGenerator responseGenerator, IEventService events, ILogger<TokenEndpoint> logger)
+        public TokenEndpoint(
+            IClientSecretValidator clientValidator, 
+            ITokenRequestValidator requestValidator, 
+            ITokenResponseGenerator responseGenerator, 
+            IEventService events, 
+            ILogger<TokenEndpoint> logger)
         {
             _clientValidator = clientValidator;
             _requestValidator = requestValidator;
@@ -56,7 +61,7 @@ namespace IdentityServer4.Endpoints
             _logger.LogTrace("Processing token request.");
 
             // validate HTTP
-            if (context.Request.Method != "POST" || !context.Request.HasFormContentType)
+            if (!HttpMethods.IsPost(context.Request.Method) || !context.Request.HasFormContentType)
             {
                 _logger.LogWarning("Invalid HTTP request for token endpoint");
                 return Error(OidcConstants.TokenErrors.InvalidRequest);
@@ -80,7 +85,7 @@ namespace IdentityServer4.Endpoints
             // validate request
             var form = (await context.Request.ReadFormAsync()).AsNameValueCollection();
             _logger.LogTrace("Calling into token request validator: {type}", _requestValidator.GetType().FullName);
-            var requestResult = await _requestValidator.ValidateRequestAsync(form, clientResult.Client);
+            var requestResult = await _requestValidator.ValidateRequestAsync(form, clientResult);
 
             if (requestResult.IsError)
             {

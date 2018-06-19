@@ -1,4 +1,4 @@
-﻿// Copyright (c) Brock Allen & Dominick Baier. All rights reserved.
+// Copyright (c) Brock Allen & Dominick Baier. All rights reserved.
 // Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
 
 
@@ -7,7 +7,7 @@ using System.Collections.Generic;
 
 namespace IdentityServer4.UnitTests.Validation
 {
-    class TestClients
+    internal class TestClients
     {
         public static IEnumerable<Client> Get()
         {
@@ -25,6 +25,29 @@ namespace IdentityServer4.UnitTests.Validation
 
                     AllowedGrantTypes = GrantTypes.Code,
                     AllowedScopes = { "openid", "profile", "resource", "resource2" },
+
+                    RequireConsent = false,
+
+                    RedirectUris = new List<string>
+                    {
+                        "https://server/cb"
+                    },
+
+                    AuthorizationCodeLifetime = 60
+                },
+                new Client
+                {
+                    ClientName = "Code Client (allows plain text PKCE)",
+                    Enabled = true,
+                    ClientId = "codeclient.plain",
+                    ClientSecrets = new List<Secret>
+                    {
+                        new Secret("secret".Sha256())
+                    },
+
+                    AllowedGrantTypes = GrantTypes.Code,
+                    AllowedScopes = { "openid", "profile", "resource", "resource2" },
+                    AllowPlainTextPkce = true,
 
                     RequireConsent = false,
 
@@ -427,6 +450,7 @@ namespace IdentityServer4.UnitTests.Validation
                         },
 
                         AllowedGrantTypes = GrantTypes.Implicit,
+                        RedirectUris = { "https://notused" },
                         AllowedScopes = { "openid", "profile", "resource", "resource2" },
 
                         AccessTokenType = AccessTokenType.Reference
@@ -457,12 +481,14 @@ namespace IdentityServer4.UnitTests.Validation
                         ClientId = "client.implicit",
                         ClientName = "Implicit Client",
                         AllowedGrantTypes = GrantTypes.Implicit,
+                        RedirectUris = { "https://notused" },
                         AllowedScopes = { "openid", "profile", "resource", "resource2" }
                     },
                     new Client
                     {
                         ClientId = "implicit_and_client_creds",
                         AllowedGrantTypes = GrantTypes.ImplicitAndClientCredentials,
+                        RedirectUris = { "https://notused" },
                         AllowedScopes = {"api1"}
                     }
             };

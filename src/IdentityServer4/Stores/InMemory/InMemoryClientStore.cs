@@ -16,7 +16,7 @@ namespace IdentityServer4.Stores
     /// </summary>
     public class InMemoryClientStore : IClientStore
     {
-        readonly IEnumerable<Client> _clients;
+        private readonly IEnumerable<Client> _clients;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="InMemoryClientStore"/> class.
@@ -42,7 +42,7 @@ namespace IdentityServer4.Stores
         {
             var query =
                 from client in _clients
-                where client.ClientId == clientId && client.Enabled
+                where client.ClientId == clientId
                 select client;
             
             return Task.FromResult(query.SingleOrDefault());

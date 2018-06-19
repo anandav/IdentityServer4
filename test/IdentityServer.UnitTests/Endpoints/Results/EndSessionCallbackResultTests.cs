@@ -19,15 +19,13 @@ namespace IdentityServer4.UnitTests.Endpoints.Results
 {
     public class EndSessionCallbackResultTests
     {
-        EndSessionCallbackResult _subject;
+        private EndSessionCallbackResult _subject;
 
-        EndSessionCallbackValidationResult _result = new EndSessionCallbackValidationResult();
-        MockSessionIdService _mockSessionId = new MockSessionIdService();
-        MockClientSessionService _mockClientSession = new MockClientSessionService();
-        MockMessageStore<LogoutMessage> _mockLogoutMessageStore = new MockMessageStore<LogoutMessage>();
-        IdentityServerOptions _options = TestIdentityServerOptions.Create();
+        private EndSessionCallbackValidationResult _result = new EndSessionCallbackValidationResult();
+        private MockUserSession _mockUserSession = new MockUserSession();
+        private IdentityServerOptions _options = TestIdentityServerOptions.Create();
 
-        DefaultHttpContext _context = new DefaultHttpContext();
+        private DefaultHttpContext _context = new DefaultHttpContext();
 
         public EndSessionCallbackResultTests()
         {
@@ -35,18 +33,7 @@ namespace IdentityServer4.UnitTests.Endpoints.Results
             _context.SetIdentityServerBasePath("/");
             _context.Response.Body = new MemoryStream();
 
-            _subject = new EndSessionCallbackResult(_result, _mockClientSession, _mockLogoutMessageStore, _options);
-        }
-
-        [Fact]
-        public async Task logout_message_should_be_removed()
-        {
-            _mockLogoutMessageStore.Messages.Add("1", new Message<LogoutMessage>(new LogoutMessage()));
-            _result.LogoutId = "1";
-
-            await _subject.ExecuteAsync(_context);
-
-            _mockLogoutMessageStore.Messages.Count.Should().Be(0);
+            _subject = new EndSessionCallbackResult(_result, _options);
         }
 
         [Fact]
@@ -60,21 +47,10 @@ namespace IdentityServer4.UnitTests.Endpoints.Results
         }
 
         [Fact]
-        public async Task success_should_clear_cookies()
-        {
-            _result.IsError = false;
-            _result.SessionId = "5";
-
-            await _subject.ExecuteAsync(_context);
-
-            _mockClientSession.RemoveCookieWasCalled.Should().BeTrue();
-        }
-
-        [Fact]
         public async Task success_should_render_html_and_iframes()
         {
             _result.IsError = false;
-            _result.ClientLogoutUrls = new string[] { "http://foo.com", "http://bar.com" };
+            _result.FrontChannelLogoutUrls = new string[] { "http://foo.com", "http://bar.com" };
 
             await _subject.ExecuteAsync(_context);
 
@@ -82,6 +58,12 @@ namespace IdentityServer4.UnitTests.Endpoints.Results
             _context.Response.Headers["Cache-Control"].First().Should().Contain("no-store");
             _context.Response.Headers["Cache-Control"].First().Should().Contain("no-cache");
             _context.Response.Headers["Cache-Control"].First().Should().Contain("max-age=0");
+            _context.Response.Headers["Content-Security-Policy"].First().Should().Contain("default-src 'none';");
+            _context.Response.Headers["Content-Security-Policy"].First().Should().Contain("style-src 'sha256-u+OupXgfekP+x/f6rMdoEAspPCYUtca912isERnoEjY=';");
+            _context.Response.Headers["Content-Security-Policy"].First().Should().Contain("frame-src http://foo.com http://bar.com");
+            _context.Response.Headers["X-Content-Security-Policy"].First().Should().Contain("default-src 'none';");
+            _context.Response.Headers["X-Content-Security-Policy"].First().Should().Contain("style-src 'sha256-u+OupXgfekP+x/f6rMdoEAspPCYUtca912isERnoEjY=';");
+            _context.Response.Headers["X-Content-Security-Policy"].First().Should().Contain("frame-src http://foo.com http://bar.com");
             _context.Response.Body.Seek(0, SeekOrigin.Begin);
             using (var rdr = new StreamReader(_context.Response.Body))
             {
@@ -89,6 +71,32 @@ namespace IdentityServer4.UnitTests.Endpoints.Results
                 html.Should().Contain("<iframe src='http://foo.com'></iframe>");
                 html.Should().Contain("<iframe src='http://bar.com'></iframe>");
             }
+        }
+
+        [Fact]
+        public async Task fsuccess_should_add_unsafe_inline_for_csp_level_1()
+        {
+            _result.IsError = false;
+
+            _options.Csp.Level = CspLevel.One;
+
+            await _subject.ExecuteAsync(_context);
+
+            _context.Response.Headers["Content-Security-Policy"].First().Should().Contain("style-src 'unsafe-inline' 'sha256-u+OupXgfekP+x/f6rMdoEAspPCYUtca912isERnoEjY='");
+            _context.Response.Headers["X-Content-Security-Policy"].First().Should().Contain("style-src 'unsafe-inline' 'sha256-u+OupXgfekP+x/f6rMdoEAspPCYUtca912isERnoEjY='");
+        }
+
+        [Fact]
+        public async Task form_post_mode_should_not_add_deprecated_header_when_it_is_disabled()
+        {
+            _result.IsError = false;
+
+            _options.Csp.AddDeprecatedHeader = false;
+
+            await _subject.ExecuteAsync(_context);
+
+            _context.Response.Headers["Content-Security-Policy"].First().Should().Contain("style-src 'sha256-u+OupXgfekP+x/f6rMdoEAspPCYUtca912isERnoEjY='");
+            _context.Response.Headers["X-Content-Security-Policy"].Should().BeEmpty();
         }
     }
 }

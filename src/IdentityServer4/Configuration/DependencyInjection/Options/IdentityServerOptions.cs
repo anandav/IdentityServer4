@@ -2,7 +2,6 @@
 // Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
 
 
-
 namespace IdentityServer4.Configuration
 {
     /// <summary>
@@ -18,6 +17,16 @@ namespace IdentityServer4.Configuration
         /// Unique name of this server instance, e.g. https://myissuer.com
         /// </value>
         public string IssuerUri { get; set; }
+
+        /// <summary>
+        /// Gets or sets the origin of this server instance, e.g. https://myorigin.com.
+        /// If not set, the origin name is inferred from the request
+        /// Note: Do not set a URL or include a path.
+        /// </summary>
+        /// <value>
+        /// Origin of this server instance, e.g. https://myorigin.com
+        /// </value>
+        public string PublicOrigin { get; set; }
 
         /// <summary>
         /// Gets or sets the endpoint configuration.
@@ -82,5 +91,10 @@ namespace IdentityServer4.Configuration
         /// The cors options.
         /// </value>
         public CorsOptions Cors { get; set; } = new CorsOptions();
+
+        /// <summary>
+        /// Gets or sets the Content Security Policy options.
+        /// </summary>
+        public CspOptions Csp { get; set; } = new CspOptions();
     }
 }

@@ -1,15 +1,13 @@
-﻿// Copyright (c) Brock Allen & Dominick Baier. All rights reserved.
+// Copyright (c) Brock Allen & Dominick Baier. All rights reserved.
 // Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
 
 
 using IdentityServer4.Configuration;
 using IdentityServer4.Extensions;
-using IdentityServer4.Infrastructure;
 using IdentityServer4.Models;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
-using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -19,17 +17,6 @@ namespace IdentityServer4
 {
     internal class MessageCookie<TModel>
     {
-        static readonly JsonSerializerSettings Settings = new JsonSerializerSettings
-        {
-            NullValueHandling = NullValueHandling.Ignore,
-            DefaultValueHandling = DefaultValueHandling.Ignore
-        };
-
-        static MessageCookie()
-        {
-            Settings.Converters.Add(new NameValueCollectionConverter());
-        }
-
         private readonly ILogger _logger;
         private readonly IdentityServerOptions _options;
         private readonly IHttpContextAccessor _context;
@@ -47,31 +34,31 @@ namespace IdentityServer4
             _protector = provider.CreateProtector(MessageType);
         }
 
-        string MessageType => typeof(TModel).Name;
+        private string MessageType => typeof(TModel).Name;
 
-        string Protect(Message<TModel> message)
+        private string Protect(Message<TModel> message)
         {
-            var json = JsonConvert.SerializeObject(message, Settings);
+            var json = ObjectSerializer.ToString(message);
             _logger.LogTrace("Protecting message: {0}", json);
 
             return _protector.Protect(json);
         }
 
-        Message<TModel> Unprotect(string data)
+        private Message<TModel> Unprotect(string data)
         {
             var json = _protector.Unprotect(data);
-            var message = JsonConvert.DeserializeObject<Message<TModel>>(json, Settings);
+            var message = ObjectSerializer.FromString<Message<TModel>>(json);
             return message;
         }
 
-        string CookiePrefix => MessageType + ".";
+        private string CookiePrefix => MessageType + ".";
 
-        string GetCookieFullName(string id)
+        private string GetCookieFullName(string id)
         {
             return CookiePrefix + id;
         }
 
-        string CookiePath => _context.HttpContext.GetIdentityServerBasePath().CleanUrlPath();
+        private string CookiePath => _context.HttpContext.GetIdentityServerBasePath().CleanUrlPath();
 
         private IEnumerable<string> GetCookieNames()
         {
@@ -115,7 +102,7 @@ namespace IdentityServer4
             return ReadByCookieName(name);
         }
 
-        Message<TModel> ReadByCookieName(string name)
+        private Message<TModel> ReadByCookieName(string name)
         {
             var data = _context.HttpContext.Request.Cookies[name];
             if (data.IsPresent())
@@ -126,7 +113,7 @@ namespace IdentityServer4
                 }
                 catch(Exception ex)
                 {
-                    _logger.LogError("Error unprotecting message cookie: {exception}", ex.Message);
+                    _logger.LogError(ex, "Error unprotecting message cookie");
                     ClearByCookieName(name);
                 }
             }
@@ -139,14 +126,14 @@ namespace IdentityServer4
             ClearByCookieName(name);
         }
 
-        void ClearByCookieName(string name)
+        private void ClearByCookieName(string name)
         {
             _context.HttpContext.Response.Cookies.Append(
                 name,
                 ".",
                 new CookieOptions
                 {
-                    Expires = IdentityServerDateTime.UtcNow.AddYears(-1),
+                    Expires = new DateTime(2000, 1, 1),
                     HttpOnly = true,
                     Secure = Secure,
                     Path = CookiePath
@@ -170,7 +157,7 @@ namespace IdentityServer4
             catch (CryptographicException e)
             {   
                 // cookie was protected with a different key/algorithm
-                _logger.LogDebug("Unable to unprotect cookie {0}: {1}", name, e.Message);
+                _logger.LogDebug(e, "Unable to unprotect cookie {0}", name);
             }
             
             return rank;

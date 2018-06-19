@@ -13,40 +13,44 @@ using System.Linq;
 using System.Security.Claims;
 using System.Threading.Tasks;
 using Xunit;
+using IdentityServer.UnitTests.Common;
 
 namespace IdentityServer4.UnitTests.Services.Default
 {
-    public class DefaultConsentServiceTests : IDisposable
+    public class DefaultConsentServiceTests
     {
-        DefaultConsentService _subject;
-        MockProfileService _mockMockProfileService = new MockProfileService();
+        private DefaultConsentService _subject;
+        private MockProfileService _mockMockProfileService = new MockProfileService();
 
-        ClaimsPrincipal _user;
-        Client _client;
-        TestUserConsentStore _userConsentStore = new TestUserConsentStore();
+        private ClaimsPrincipal _user;
+        private Client _client;
+        private TestUserConsentStore _userConsentStore = new TestUserConsentStore();
+        private StubClock _clock = new StubClock();
 
-        Func<DateTime> originalNowFunc;
-        DateTime now;
+        private DateTime now;
 
         public DefaultConsentServiceTests()
         {
+            _clock.UtcNowFunc = () => UtcNow;
+
             _client = new Client
             {
                 ClientId = "client"
             };
 
-            _user = IdentityServerPrincipal.Create("bob", "bob", new Claim[] {
-                new Claim("foo", "foo1"),
-                new Claim("foo", "foo2"),
-                new Claim("bar", "bar1"),
-                new Claim("bar", "bar2"),
-                new Claim(JwtClaimTypes.AuthenticationContextClassReference, "acr1")
-            });
+            _user = new IdentityServerUser("bob")
+            {
+                AdditionalClaims =
+                {
+                    new Claim("foo", "foo1"),
+                    new Claim("foo", "foo2"),
+                    new Claim("bar", "bar1"),
+                    new Claim("bar", "bar2"),
+                    new Claim(JwtClaimTypes.AuthenticationContextClassReference, "acr1")
+                }
+            }.CreatePrincipal();
 
-            _subject = new DefaultConsentService(_userConsentStore);
-
-            originalNowFunc = IdentityServerDateTime.UtcNowFunc;
-            IdentityServerDateTime.UtcNowFunc = () => UtcNow;
+            _subject = new DefaultConsentService(_clock, _userConsentStore, TestLogger.Create<DefaultConsentService>());
         }
 
         public DateTime UtcNow
@@ -55,14 +59,6 @@ namespace IdentityServer4.UnitTests.Services.Default
             {
                 if (now > DateTime.MinValue) return now;
                 return DateTime.UtcNow;
-            }
-        }
-
-        public void Dispose()
-        {
-            if (originalNowFunc != null)
-            {
-                IdentityServerDateTime.UtcNowFunc = originalNowFunc;
             }
         }
 

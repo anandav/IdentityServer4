@@ -1,4 +1,4 @@
-﻿// Copyright (c) Brock Allen & Dominick Baier. All rights reserved.
+// Copyright (c) Brock Allen & Dominick Baier. All rights reserved.
 // Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
 
 
@@ -8,6 +8,7 @@ using IdentityServer4.Stores;
 using Microsoft.Extensions.Logging;
 using System.Security.Claims;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Authentication;
 
 namespace IdentityServer4.Services
 {
@@ -27,12 +28,19 @@ namespace IdentityServer4.Services
         protected readonly IRefreshTokenStore RefreshTokenStore;
 
         /// <summary>
+        /// The clock
+        /// </summary>
+        protected readonly ISystemClock Clock;
+
+        /// <summary>
         /// Initializes a new instance of the <see cref="DefaultRefreshTokenService" /> class.
         /// </summary>
+        /// <param name="clock">The clock</param>
         /// <param name="refreshTokenStore">The refresh token store</param>
         /// <param name="logger">The logger</param>
-        public DefaultRefreshTokenService(IRefreshTokenStore refreshTokenStore, ILogger<DefaultRefreshTokenService> logger)
+        public DefaultRefreshTokenService(ISystemClock clock, IRefreshTokenStore refreshTokenStore, ILogger<DefaultRefreshTokenService> logger)
         {
+            Clock = clock;
             _logger = logger;
             RefreshTokenStore = refreshTokenStore;
         }
@@ -64,7 +72,7 @@ namespace IdentityServer4.Services
 
             var refreshToken = new RefreshToken
             {
-                CreationTime = IdentityServerDateTime.UtcNow,
+                CreationTime = Clock.UtcNow.UtcDateTime,
                 Lifetime = lifetime,
                 AccessToken = accessToken
             };
@@ -104,15 +112,17 @@ namespace IdentityServer4.Services
             {
                 _logger.LogDebug("Refresh token expiration is sliding - extending lifetime");
 
-                // make sure we don't exceed absolute exp
-                // cap it at absolute exp
-                var currentLifetime = refreshToken.CreationTime.GetLifetimeInSeconds();
+                // if absolute exp > 0, make sure we don't exceed absolute exp
+                // if absolute exp = 0, allow indefinite slide
+                var currentLifetime = refreshToken.CreationTime.GetLifetimeInSeconds(Clock.UtcNow.UtcDateTime);
                 _logger.LogDebug("Current lifetime: " + currentLifetime.ToString());
 
                 var newLifetime = currentLifetime + client.SlidingRefreshTokenLifetime;
                 _logger.LogDebug("New lifetime: " + newLifetime.ToString());
 
-                if (newLifetime > client.AbsoluteRefreshTokenLifetime)
+                // zero absolute refresh token lifetime represents unbounded absolute lifetime
+                // if absolute lifetime > 0, cap at absolute lifetime
+                if (client.AbsoluteRefreshTokenLifetime > 0 && newLifetime > client.AbsoluteRefreshTokenLifetime)
                 {
                     newLifetime = client.AbsoluteRefreshTokenLifetime;
                     _logger.LogDebug("New lifetime exceeds absolute lifetime, capping it to " + newLifetime.ToString());

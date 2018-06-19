@@ -1,4 +1,4 @@
-﻿// Copyright (c) Brock Allen & Dominick Baier. All rights reserved.
+// Copyright (c) Brock Allen & Dominick Baier. All rights reserved.
 // Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
 
 
@@ -24,7 +24,7 @@ namespace IdentityServer4.Extensions
         [DebuggerStepThrough]
         public static DateTime GetAuthenticationTime(this IPrincipal principal)
         {
-            return principal.GetAuthenticationTimeEpoch().ToDateTimeFromEpoch();
+            return ((int)principal.GetAuthenticationTimeEpoch()).ToDateTimeFromEpoch();
         }
 
         /// <summary>
@@ -87,9 +87,27 @@ namespace IdentityServer4.Extensions
         /// <param name="principal">The principal.</param>
         /// <returns></returns>
         [DebuggerStepThrough]
+        [Obsolete("This method will be removed in a future version. Use GetDisplayName instead.")]
         public static string GetName(this IPrincipal principal)
         {
             return principal.Identity.GetName();
+        }
+
+        /// <summary>
+        /// Gets the name.
+        /// </summary>
+        /// <param name="principal">The principal.</param>
+        /// <returns></returns>
+        [DebuggerStepThrough]
+        public static string GetDisplayName(this ClaimsPrincipal principal)
+        {
+            var name = principal.Identity.Name;
+            if (name.IsPresent()) return name;
+
+            var sub = principal.FindFirst(JwtClaimTypes.Subject);
+            if (sub != null) return sub.Value;
+
+            return "";
         }
 
         /// <summary>
@@ -99,6 +117,7 @@ namespace IdentityServer4.Extensions
         /// <returns></returns>
         /// <exception cref="System.InvalidOperationException">name claim is missing</exception>
         [DebuggerStepThrough]
+        [Obsolete("This method will be removed in a future version. Use GetDisplayName instead.")]
         public static string GetName(this IIdentity identity)
         {
             var id = identity as ClaimsIdentity;

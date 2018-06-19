@@ -27,13 +27,13 @@ namespace IdentityServer4.Stores
             IPersistentGrantSerializer serializer,
             IHandleGenerationService handleGenerationService,
             ILogger<DefaultUserConsentStore> logger) 
-            : base(Constants.PersistedGrantTypes.UserConsent, store, serializer, handleGenerationService, logger)
+            : base(IdentityServerConstants.PersistedGrantTypes.UserConsent, store, serializer, handleGenerationService, logger)
         {
         }
 
-        string GetConsentKey(string subjectId, string clientId)
+        private string GetConsentKey(string subjectId, string clientId)
         {
-            return subjectId + "|" + clientId;
+            return clientId + "|" + subjectId;
         }
 
         /// <summary>
@@ -43,7 +43,7 @@ namespace IdentityServer4.Stores
         /// <returns></returns>
         public Task StoreUserConsentAsync(Consent consent)
         {
-            var key = GetConsentKey(consent.ClientId, consent.SubjectId);
+            var key = GetConsentKey(consent.SubjectId, consent.ClientId);
             return StoreItemAsync(key, consent, consent.ClientId, consent.SubjectId, consent.CreationTime, consent.Expiration);
         }
 
@@ -55,7 +55,7 @@ namespace IdentityServer4.Stores
         /// <returns></returns>
         public Task<Consent> GetUserConsentAsync(string subjectId, string clientId)
         {
-            var key = GetConsentKey(clientId, subjectId);
+            var key = GetConsentKey(subjectId, clientId);
             return GetItemAsync(key);
         }
 
@@ -67,7 +67,7 @@ namespace IdentityServer4.Stores
         /// <returns></returns>
         public Task RemoveUserConsentAsync(string subjectId, string clientId)
         {
-            var key = GetConsentKey(clientId, subjectId);
+            var key = GetConsentKey(subjectId, clientId);
             return RemoveItemAsync(key);
         }
     }
